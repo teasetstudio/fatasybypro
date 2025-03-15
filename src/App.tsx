@@ -188,6 +188,14 @@ const App = () => {
       return;
     }
     
+    // Get the frame ID before deleting
+    const frameIdToDelete = frames[indexToDelete].id;
+    
+    // If the preview modal is open for this frame, close it
+    if (isModalOpen && selectedFrameIndex === indexToDelete) {
+      closeModal();
+    }
+    
     // Create a new array without the frame to delete
     const updatedFrames = frames.filter((_, index) => index !== indexToDelete);
     
@@ -195,10 +203,11 @@ const App = () => {
     setFrames(updatedFrames);
     
     // Clean up the canvas ref for the deleted frame
-    const frameId = frames[indexToDelete].id;
-    if (canvasRefs.current[frameId]) {
-      delete canvasRefs.current[frameId];
+    if (canvasRefs.current[frameIdToDelete]) {
+      delete canvasRefs.current[frameIdToDelete];
     }
+    
+    console.log(`Deleted frame ${frameIdToDelete} at index ${indexToDelete}`);
   };
 
   const handleColorChange = (color: string) => {
@@ -258,21 +267,25 @@ const App = () => {
   };
 
   const openPreviewModal = (index: number) => {
-    const canvas = canvasRefs.current[frames[index].id];
+    // Store the frame ID to ensure we're working with the correct frame
+    const frameId = frames[index].id;
+    const canvas = canvasRefs.current[frameId];
+    
     if (canvas) {
       try {
         // Get the save data and ensure it's valid
         const saveData = safelyGetCanvasData(canvas, currentAspectRatio.width * 2, currentAspectRatio.height * 2);
         
-        console.log("Opening modal with canvas data:", saveData);
+        console.log(`Opening modal for frame ${frameId} at index ${index}`);
         console.log("Canvas data type:", typeof saveData);
         console.log("Canvas data length:", saveData ? saveData.length : 0);
         
+        // Store both the index and the frame ID to ensure consistency
         setSelectedFrameIndex(index);
         setModalCanvasData(saveData);
         setIsModalOpen(true);
       } catch (error) {
-        console.error("Error preparing canvas data for modal:", error);
+        console.error(`Error preparing canvas data for modal for frame ${frameId}:`, error);
         alert("There was an error opening the preview. Please try again.");
       }
     }
@@ -288,15 +301,17 @@ const App = () => {
   const saveModalChanges = () => {
     if (selectedFrameIndex !== null && modalCanvasRef.current) {
       try {
+        // Ensure we're working with the correct frame by getting its ID
+        const frameId = frames[selectedFrameIndex].id;
+        
         // Get the save data from the modal canvas
         const saveData = safelyGetCanvasData(modalCanvasRef.current, currentAspectRatio.width * 2, currentAspectRatio.height * 2);
         
-        console.log("Modal canvas save data:", saveData);
+        console.log(`Saving modal canvas data for frame ${frameId} at index ${selectedFrameIndex}`);
         console.log("Modal canvas save data type:", typeof saveData);
         console.log("Modal canvas save data length:", saveData ? saveData.length : 0);
         
         // Update the frame's canvas with the modal canvas data
-        const frameId = frames[selectedFrameIndex].id;
         const mainCanvas = canvasRefs.current[frameId];
         
         if (mainCanvas) {
@@ -306,13 +321,15 @@ const App = () => {
           // Update the frames state with the new canvas data
           setFrames(
             frames.map((frame, index) => 
-              index === selectedFrameIndex 
+              frame.id === frameId 
                 ? { ...frame, canvasData: saveData } 
                 : frame
             )
           );
           
-          console.log("Successfully saved changes with smoothness:", brushSmoothness);
+          console.log(`Successfully saved changes for frame ${frameId} with smoothness: ${brushSmoothness}`);
+        } else {
+          console.error(`Could not find main canvas for frame ${frameId}`);
         }
         
         // Close the modal
@@ -326,33 +343,43 @@ const App = () => {
 
   // Effect to load canvas data into modal when it opens
   useEffect(() => {
-    if (isModalOpen && modalCanvasRef.current) {
+    if (isModalOpen && modalCanvasRef.current && selectedFrameIndex !== null) {
       try {
-        console.log("Modal opened, attempting to load canvas data");
+        // Get the frame ID to ensure we're working with the correct frame
+        const frameId = frames[selectedFrameIndex]?.id;
+        
+        if (!frameId) {
+          console.error("Invalid frame index or frame ID not found");
+          closeModal();
+          return;
+        }
+        
+        console.log(`Modal opened for frame ${frameId} at index ${selectedFrameIndex}`);
         
         // Add a small delay to ensure the canvas is fully rendered
         setTimeout(() => {
           if (modalCanvasRef.current) {
             if (!modalCanvasData) {
-              console.log("No modal canvas data available, using empty canvas");
+              console.log(`No modal canvas data available for frame ${frameId}, using empty canvas`);
               const emptyCanvasData = createEmptyCanvasData(currentAspectRatio.width * 2, currentAspectRatio.height * 2);
               safelyLoadCanvasData(modalCanvasRef.current, emptyCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
               return;
             }
             
-            console.log("Loading modal canvas data:", modalCanvasData);
+            console.log(`Loading modal canvas data for frame ${frameId}:`);
             console.log("Modal canvas data type:", typeof modalCanvasData);
             console.log("Modal canvas data length:", modalCanvasData.length);
             
             safelyLoadCanvasData(modalCanvasRef.current, modalCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
-            console.log("Successfully loaded canvas data into modal");
+            console.log(`Successfully loaded canvas data into modal for frame ${frameId}`);
           }
         }, 100);
       } catch (error) {
         console.error("Error in modal canvas effect:", error);
+        closeModal();
       }
     }
-  }, [isModalOpen, modalCanvasData, currentAspectRatio.width, currentAspectRatio.height]);
+  }, [isModalOpen, modalCanvasData, currentAspectRatio.width, currentAspectRatio.height, selectedFrameIndex, frames, closeModal]);
 
   return (
     <div className="min-h-screen bg-gray-100">
