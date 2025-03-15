@@ -161,6 +161,10 @@ const App = () => {
   const [selectedFrameIndex, setSelectedFrameIndex] = useState<number | null>(null);
   const [modalCanvasData, setModalCanvasData] = useState<string | null>(null);
   const modalCanvasRef = useRef<CanvasDraw | null>(null);
+  
+  // Add state to track modal canvas changes
+  const [modalCanvasChanged, setModalCanvasChanged] = useState(false);
+  const [currentModalCanvasData, setCurrentModalCanvasData] = useState<string | null>(null);
 
   // Use useCallback for addFrame to avoid dependency issues
   const addFrame = useCallback(() => {
@@ -210,17 +214,34 @@ const App = () => {
     console.log(`Deleted frame ${frameIdToDelete} at index ${indexToDelete}`);
   };
 
+  // Add a function to handle drawing tool changes that preserves modal canvas state
+  const handleDrawingToolChange = (action: () => void) => {
+    // If modal is open, save current canvas state first
+    if (isModalOpen && modalCanvasRef.current) {
+      try {
+        const currentData = modalCanvasRef.current.getSaveData();
+        setCurrentModalCanvasData(currentData);
+        setModalCanvasChanged(true);
+      } catch (error) {
+        console.error("Error saving modal canvas state:", error);
+      }
+    }
+    
+    // Then perform the action (color change, brush size change, etc.)
+    action();
+  };
+
   const handleColorChange = (color: string) => {
-    setCurrentBrushColor(color);
+    handleDrawingToolChange(() => setCurrentBrushColor(color));
   };
 
   const handleBrushSizeChange = (size: number) => {
-    setCurrentBrushRadius(size);
+    handleDrawingToolChange(() => setCurrentBrushRadius(size));
   };
 
   const handleSmoothnessChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const smoothness = parseInt(e.target.value);
-    setBrushSmoothness(smoothness);
+    handleDrawingToolChange(() => setBrushSmoothness(smoothness));
   };
 
   const handleAspectRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -295,6 +316,8 @@ const App = () => {
     setIsModalOpen(false);
     setSelectedFrameIndex(null);
     setModalCanvasData(null);
+    setModalCanvasChanged(false);
+    setCurrentModalCanvasData(null);
   };
 
   // Add a function to save changes from modal to the main canvas
@@ -359,6 +382,14 @@ const App = () => {
         // Add a small delay to ensure the canvas is fully rendered
         setTimeout(() => {
           if (modalCanvasRef.current) {
+            // If we have changed the canvas in the modal and are just updating tools, use that data
+            if (modalCanvasChanged && currentModalCanvasData) {
+              console.log(`Loading preserved modal canvas data after tool change`);
+              safelyLoadCanvasData(modalCanvasRef.current, currentModalCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
+              return;
+            }
+            
+            // Otherwise load from the original data
             if (!modalCanvasData) {
               console.log(`No modal canvas data available for frame ${frameId}, using empty canvas`);
               const emptyCanvasData = createEmptyCanvasData(currentAspectRatio.width * 2, currentAspectRatio.height * 2);
@@ -379,7 +410,16 @@ const App = () => {
         closeModal();
       }
     }
-  }, [isModalOpen, modalCanvasData, currentAspectRatio.width, currentAspectRatio.height, selectedFrameIndex, frames, closeModal]);
+  }, [
+    isModalOpen, 
+    modalCanvasData, 
+    currentAspectRatio, 
+    selectedFrameIndex, 
+    frames, 
+    closeModal, 
+    modalCanvasChanged, 
+    currentModalCanvasData
+  ]);
 
   return (
     <div className="min-h-screen bg-gray-100">
