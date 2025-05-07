@@ -87,6 +87,26 @@ const DependencyManager: React.FC<DependencyManagerProps> = ({
       <div className="bg-gray-50 p-4 rounded-lg mb-6">
         <h4 className="text-sm font-medium text-gray-700 mb-3">Add New Dependency</h4>
         <div className="space-y-3">
+          
+        <div>
+            <label htmlFor="relationshipType" className="block text-sm font-medium text-gray-700 mb-1">
+              Relationship Type
+            </label>
+            <select
+              id="relationshipType"
+              value={selectedRelationshipType}
+              onChange={(e) => setSelectedRelationshipType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select relationship type...</option>
+              {relationshipTypes[currentAsset.type].map((rel) => (
+                <option key={rel.label} value={rel.label}>
+                  {rel.description}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label htmlFor="dependencyAsset" className="block text-sm font-medium text-gray-700 mb-1">
               Select Asset
@@ -101,25 +121,6 @@ const DependencyManager: React.FC<DependencyManagerProps> = ({
               {availableAssets.map((asset) => (
                 <option key={asset.id} value={asset.id}>
                   {asset.name} ({asset.type})
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          <div>
-            <label htmlFor="relationshipType" className="block text-sm font-medium text-gray-700 mb-1">
-              Relationship Type
-            </label>
-            <select
-              id="relationshipType"
-              value={selectedRelationshipType}
-              onChange={(e) => setSelectedRelationshipType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select relationship type...</option>
-              {relationshipTypes[currentAsset.type].map((rel) => (
-                <option key={rel.label} value={rel.label}>
-                  {rel.description}
                 </option>
               ))}
             </select>
