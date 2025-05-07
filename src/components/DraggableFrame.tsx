@@ -1,33 +1,25 @@
-import React, { forwardRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import Frame from './Frame';
 import { IFrame } from './types';
-import { aspectRatios } from './DrawingTools';
 
 interface DraggableFrameProps {
-  id: string;
   frame: IFrame;
-  description: string;
-  index: number;
-  currentAspectRatio: typeof aspectRatios[0];
   brushColor: string;
   brushRadius: number;
   brushSmoothness: number;
-  onDelete: (id: string) => void;
   onPreview: (id: string) => void;
-  onDescriptionChange: (index: number, description: string) => void;
-  updateGlobalFramesData: (id: string, data: Partial<IFrame>) => void;
 }
 
-const DraggableFrame = forwardRef<IFrame[], DraggableFrameProps>((props, framesDataRef) => {
+const DraggableFrame = (props: DraggableFrameProps) => {
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
-    id: props.id,
+    id: props.frame.id,
   });
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: props.id,
+    id: props.frame.id,
   });
 
   const style = transform ? {
@@ -80,7 +72,7 @@ const DraggableFrame = forwardRef<IFrame[], DraggableFrameProps>((props, framesD
 
         {/* Frame Component */}
         <div className={`transition-opacity duration-200 ${isDragging ? 'opacity-50' : 'opacity-100'}`}>
-          <Frame ref={framesDataRef} {...props} />
+          <Frame {...props} />
         </div>
 
         {/* Placeholder */}
@@ -95,8 +87,6 @@ const DraggableFrame = forwardRef<IFrame[], DraggableFrameProps>((props, framesD
       </div>
     </div>
   );
-});
-
-DraggableFrame.displayName = 'DraggableFrame';
+};
 
 export default DraggableFrame;

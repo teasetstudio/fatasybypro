@@ -1,43 +1,72 @@
-import React, { useRef, useEffect, useState, forwardRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import CanvasDraw from 'react-canvas-draw';
-import { aspectRatios } from './DrawingTools';
 import { IFrame } from './types';
+import { useFrames } from '../context/FramesContext';
+import { useAssets } from '../context/AssetContext';
+import { Asset, AssetType, AssetStatus } from '../types/asset';
+import FrameAssetAnalyzer from './FrameAssetAnalyzer';
+import CreateAssetModal from './CreateAssetModal';
 
 interface FrameProps {
-  id: string;
   frame: IFrame;
-  description: string;
-  index: number;
-  currentAspectRatio: typeof aspectRatios[0];
   brushColor: string;
   brushRadius: number;
   brushSmoothness: number;
-  onDelete: (id: string) => void;
   onPreview: (id: string) => void;
-  onDescriptionChange: (index: number, description: string) => void;
-  updateGlobalFramesData: (id: string, data: Partial<IFrame>) => void;
 }
 
-const Frame = forwardRef<IFrame[], FrameProps>(({
-  id,
+interface Dependency {
+  id: string;
+  sourceAssetId: string;
+  targetAssetId: string;
+  relationshipType: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const Frame = ({
   frame,
-  description,
-  index,
-  currentAspectRatio,
   brushColor,
   brushRadius,
   brushSmoothness,
-  onDelete,
   onPreview,
-  onDescriptionChange,
-  updateGlobalFramesData,
-}, framesDataRef) => {
+}: FrameProps) => {
+  const { currentAspectRatio, updateFrame, deleteFrame } = useFrames();
+  const { assets, dependencies, addDependency, removeDependency, addAsset } = useAssets();
   const canvasRef = useRef<CanvasDraw | null>(null);
   const savedDataRef = useRef<string>(undefined);
   const imageRef = useRef<string | null>(null);
+  const [localDescription, setLocalDescription] = useState(frame.description);
+  const [selectedAssetType, setSelectedAssetType] = useState<AssetType | 'all'>('all');
+  const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+
+  // Get assigned assets for this frame
+  const assignedAssets = assets.filter(asset => 
+    dependencies.some((dep: Dependency) => 
+      dep.sourceAssetId === asset.id && 
+      dep.targetAssetId === frame.id && 
+      dep.relationshipType === 'used_in'
+    )
+  );
+
+  // Filter assets based on selected type and exclude already assigned ones
+  const filteredAssets = (selectedAssetType === 'all' 
+    ? assets 
+    : assets.filter(asset => asset.type === selectedAssetType)
+  ).filter(asset => !assignedAssets.some(assigned => assigned.id === asset.id));
+
+  const handleAssetAssign = (assetId: string) => {
+    addDependency(assetId, frame.id, 'used_in');
+    setIsAssetSelectorOpen(false);
+  };
+
+  const handleAssetUnassign = (assetId: string) => {
+    removeDependency(assetId, frame.id);
+  };
 
   const handleClear = () => {
     if (canvasRef.current) {
@@ -46,15 +75,21 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
       const savedData = canvasRef.current.getSaveData();
       savedDataRef.current = savedData;
       imageRef.current = null;
-      updateGlobalFramesData(id, { image: null, canvas: canvasRef.current });
+      updateFrame(frame.id, { image: null, canvas: canvasRef.current });
       setIsBackgroundImage(false);
     }
+  };
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newDescription = e.target.value;
+    setLocalDescription(newDescription);
+    updateFrame(frame.id, { description: newDescription });
   };
 
   const handleUndo = () => {
     if (canvasRef.current) {
       canvasRef.current.undo();
-      updateGlobalFramesData(id, { canvas: canvasRef.current });
+      updateFrame(frame.id, { canvas: canvasRef.current });
     }
   };
 
@@ -72,7 +107,7 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
       reader.onload = (e) => {
         const uploadedImage = e.target?.result as string;
         imageRef.current = uploadedImage;
-        updateGlobalFramesData(id, { image: uploadedImage, canvas: canvasRef.current });
+        updateFrame(frame.id, { image: uploadedImage, canvas: canvasRef.current });
         setIsBackgroundImage(true);
       };
       reader.readAsDataURL(file);
@@ -88,7 +123,7 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
     // Clear background image state
     imageRef.current = null;
     setIsBackgroundImage(false);
-    updateGlobalFramesData(id, { image: null, canvas: canvasRef.current });
+    updateFrame(frame.id, { image: null, canvas: canvasRef.current });
   };
 
   const handleDrawStart = () => {
@@ -99,7 +134,7 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
     setIsDrawing(false);
     if (canvasRef.current) {
       savedDataRef.current = canvasRef.current.getSaveData();
-      updateGlobalFramesData(id, { canvas: canvasRef.current });
+      updateFrame(frame.id, { canvas: canvasRef.current });
     }
   };
 
@@ -108,7 +143,7 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
       const data = canvasRef.current.getSaveData();
       // setSavedDrawing(data);
       savedDataRef.current = data;
-      updateGlobalFramesData(id, { canvas: canvasRef.current, image: imageRef.current });
+      updateFrame(frame.id, { canvas: canvasRef.current, image: imageRef.current });
       alert("Drawing saved to console. Check browser console for data.");
     }
   };
@@ -158,6 +193,16 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
     return undefined;
   };
 
+  const handleCreateAsset = (name: string, type: AssetType, status: AssetStatus) => {
+    addAsset({
+      name,
+      type,
+      status,
+      description: '',
+    });
+    setIsCreateModalOpen(false);
+  };
+
   useEffect(() => {
     if (canvasRef.current && frame.canvasData) {
       // When frame's canvasData changes, load it into the canvas
@@ -182,7 +227,7 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
     >
       {/* Delete button */}
       <button
-        onClick={() => onDelete(id)}
+        onClick={() => deleteFrame(frame.id)}
         className='absolute -top-3 -right-3 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition duration-200 z-10'
         aria-label="Delete frame"
       >
@@ -197,7 +242,7 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
 
         <div className="mb-3 flex justify-end space-x-2">
           <button
-            onClick={() => onPreview(id)}
+            onClick={() => onPreview(frame.id)}
             className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-sm flex items-center"
             aria-label="Preview frame"
           >
@@ -262,7 +307,7 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
         // onMouseLeave={handleDrawEnd}
       >
         <CanvasDraw 
-          key={`canvas-${id}-${isBackgroundImage ? 'img' : 'no-img'}`}
+          key={`canvas-${frame.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
           ref={canvasRef}
           className="rounded"
           brushColor={brushColor}
@@ -281,15 +326,117 @@ const Frame = forwardRef<IFrame[], FrameProps>(({
 
       {/* Description */}
       <textarea
-        value={description}
-        onChange={(e) => onDescriptionChange(index, e.target.value)}
+        value={localDescription}
+        onChange={handleDescriptionChange}
         placeholder="Enter description"
         className="w-full h-24 p-2 border border-gray-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       />
+
+      {/* Asset Assignment Section */}
+      <div className="mt-4">
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="text-sm font-semibold text-gray-700">Assigned Assets</h4>
+          <button
+            onClick={() => setIsAssetSelectorOpen(!isAssetSelectorOpen)}
+            className="text-sm text-blue-600 hover:text-blue-700"
+          >
+            {isAssetSelectorOpen ? 'Cancel' : 'Assign Asset'}
+          </button>
+        </div>
+
+        {/* Asset Selector */}
+        {isAssetSelectorOpen && (
+          <div className="mb-4 p-3 bg-gray-50 rounded">
+            <div className="mb-2">
+              <select
+                value={selectedAssetType}
+                onChange={(e) => setSelectedAssetType(e.target.value as AssetType | 'all')}
+                className="w-full p-2 border border-gray-300 rounded text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="character">Characters</option>
+                <option value="model">Models</option>
+                <option value="animation">Animations</option>
+                <option value="vfx">VFX</option>
+                <option value="environment">Environments</option>
+                <option value="prop">Props</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="max-h-40 overflow-y-auto">
+              {filteredAssets.length > 0 ? (
+                <>
+                  {filteredAssets.map(asset => (
+                    <div
+                      key={asset.id}
+                      className="flex items-center justify-between p-2 hover:bg-gray-100 rounded cursor-pointer"
+                      onClick={() => handleAssetAssign(asset.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleAssetAssign(asset.id);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <span className="text-sm">{asset.name}</span>
+                      <span className="text-xs text-gray-500 capitalize">{asset.type}</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-gray-200 my-2"></div>
+                </>
+              ) : (
+                <div className="text-center p-4">
+                  <p className="text-gray-500 mb-3">No available assets to assign.</p>
+                </div>
+              )}
+              <div className="text-center p-2">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                >
+                  Create New Asset
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Assigned Assets List */}
+        <div className="space-y-2">
+          {assignedAssets.map(asset => (
+            <div key={asset.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+              <div>
+                <span className="text-sm font-medium">{asset.name}</span>
+                <span className="text-xs text-gray-500 ml-2 capitalize">{asset.type}</span>
+              </div>
+              <button
+                onClick={() => handleAssetUnassign(asset.id)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Create Asset Modal */}
+      <CreateAssetModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateAsset}
+        assetTypes={['character', 'model', 'animation', 'vfx', 'environment', 'prop', 'other']}
+        defaultAssetType={selectedAssetType === 'all' ? 'character' : selectedAssetType as AssetType}
+      />
+
+      {/* Asset Analysis */}
+      <FrameAssetAnalyzer frame={frame} />
     </div>
   );
-});
-
-Frame.displayName = 'Frame';
+};
 
 export default Frame;
