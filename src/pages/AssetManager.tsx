@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Asset, AssetType, AssetStatus } from '../types/asset';
 import { useAssets } from '../context/AssetContext';
 import CreateAssetModal from '../components/CreateAssetModal';

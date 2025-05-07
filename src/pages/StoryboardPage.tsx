@@ -1,15 +1,8 @@
-// import React from 'react';
 import { useFrames } from '../context/FramesContext';
-// import DrawingTools, { aspectRatios } from '../components/DrawingTools';
-// import DraggableFrame from '../components/DraggableFrame';
-// import { DndContext, DragEndEvent } from "@dnd-kit/core";
-// import { useState, useCallback } from 'react';
-// import PreviewFrameModal from '../components/PreviewFrameModal';
-// import { IFrame } from '../components/types';
 import { Link } from 'react-router-dom';
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { DndContext, useDraggable, useDroppable, DragEndEvent } from "@dnd-kit/core";
-import debounce from 'lodash.debounce';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { DndContext, DragEndEvent } from "@dnd-kit/core";
+
 
 import { createEmptyCanvasData, safelyGetCanvasData, safelyLoadCanvasData } from '../components/frameUtils';
 import DrawingTools, { smoothnessOptions, aspectRatios } from '../components/DrawingTools';
@@ -315,14 +308,15 @@ const StoryboardPage = () => {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto p-4 mt-4">
+      <div className="container-full mx-auto p-4 mt-4">
         <div className="overflow-visible pb-4">
           <DndContext onDragEnd={handleDragEnd}>
-            <div className="flex flex-wrap gap-6 justify-start p-4">
+            <div className="flex flex-wrap gap-6 justify-center p-4">
               {frames.map((frame, index) => (
                 <DraggableFrame
                   key={frame.id}
                   frame={frame}
+                  index={index}
                   brushColor={brushColor}
                   brushRadius={brushRadius}
                   brushSmoothness={brushSmoothness}

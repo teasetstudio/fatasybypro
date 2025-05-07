@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -47,5 +49,17 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(function ({ addComponents }) {
+      addComponents({
+        '.container-full': {
+          width: '100%',
+          paddingLeft: '1rem',
+          paddingRight: '1rem',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        },
+      });
+    }),
+  ],
 }

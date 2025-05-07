@@ -5,6 +5,7 @@ import { IFrame } from './types';
 
 interface DraggableFrameProps {
   frame: IFrame;
+  index: number;
   brushColor: string;
   brushRadius: number;
   brushSmoothness: number;

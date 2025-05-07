@@ -9,6 +9,7 @@ import CreateAssetModal from './CreateAssetModal';
 
 interface FrameProps {
   frame: IFrame;
+  index: number;
   brushColor: string;
   brushRadius: number;
   brushSmoothness: number;
@@ -26,6 +27,7 @@ interface Dependency {
 
 const Frame = ({
   frame,
+  index,
   brushColor,
   brushRadius,
   brushSmoothness,
@@ -40,6 +42,7 @@ const Frame = ({
   const [selectedAssetType, setSelectedAssetType] = useState<AssetType | 'all'>('all');
   const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -225,16 +228,10 @@ const Frame = ({
     <div 
       className={`flex flex-col bg-white rounded-lg shadow-md p-4 relative ${currentAspectRatio.cardWidth} mb-6`}
     >
-      {/* Delete button */}
-      <button
-        onClick={() => deleteFrame(frame.id)}
-        className='absolute -top-3 -right-3 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition duration-200 z-10'
-        aria-label="Delete frame"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
-      </button>
+      {/* Frame number */}
+      <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md z-10">
+        {index + 1}
+      </div>
 
       {/* Canvas controls */}
       <div className='flex justify-between'>
@@ -296,8 +293,44 @@ const Frame = ({
               </svg>
             </button>
           )}
+          <button
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm inline-flex items-center"
+            aria-label="Delete frame"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Frame</h3>
+            <p className="text-gray-600 mb-6">Are you sure you want to delete this frame? This action cannot be undone.</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  deleteFrame(frame.id);
+                  setIsDeleteModalOpen(false);
+                }}
+                className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Canvas */}
       <div

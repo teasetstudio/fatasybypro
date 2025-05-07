@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link } from 'react-router-dom'
 
 const HomePage = () => {
@@ -40,7 +39,7 @@ const HomePage = () => {
                 </div>
               </Link>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Link
                   to="/assets"
                   className="group flex flex-col items-center p-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl hover:from-green-100 hover:to-emerald-100 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1"
@@ -70,6 +69,22 @@ const HomePage = () => {
                   <h3 className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-gray-700 transition-colors duration-300">Preview</h3>
                   <p className="text-gray-600 text-center leading-relaxed">
                     View your storyboard in presentation format
+                  </p>
+                </Link>
+
+                {/* Task Board Link */}
+                <Link
+                  to="/tasks"
+                  className="group flex flex-col items-center p-8 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl hover:from-purple-100 hover:to-indigo-100 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1"
+                >
+                  <div className="bg-white p-4 rounded-full shadow-md group-hover:shadow-lg transition-all duration-300 mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-purple-600 group-hover:text-purple-700 transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-purple-700 transition-colors duration-300">Task Board</h3>
+                  <p className="text-gray-600 text-center leading-relaxed">
+                    Manage your tasks and track progress with our Kanban board
                   </p>
                 </Link>
               </div>
