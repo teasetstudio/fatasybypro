@@ -8,6 +8,9 @@ const HomePage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [brushColor, setBrushColor] = useState('#000000');
   const [brushRadius, setBrushRadius] = useState(2);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [isBackgroundImage, setIsBackgroundImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [assets, setAssets] = useState<Array<{ id: string; name: string; type: string }>>([{ id: '1', name: 'Main Character', type: 'character' }]);
   const [tasks, setTasks] = useState<Array<{ 
     id: string; 
@@ -21,6 +24,7 @@ const HomePage: React.FC = () => {
   const [newTaskStatus, setNewTaskStatus] = useState<'todo' | 'in-progress' | 'done'>('todo');
   const [newTaskAssetId, setNewTaskAssetId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'assets' | 'tasks'>('assets');
+  const savedDataRef = useRef<string | undefined>(undefined);
 
   const handleClear = () => {
     if (canvasRef.current) {
@@ -78,6 +82,37 @@ const HomePage: React.FC = () => {
     setTasks(tasks.filter(task => task.id !== taskId));
   };
 
+  const handleBackgroundImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Save current drawing state before changing background
+      if (canvasRef.current) {
+        savedDataRef.current = canvasRef.current.getSaveData();
+      }
+      // set to false to force a re-render
+      setIsBackgroundImage(false);
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const uploadedImage = e.target?.result as string;
+        setBackgroundImage(uploadedImage);
+        setIsBackgroundImage(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleClearBackground = () => {
+    // Save current drawing state before removing background
+    if (canvasRef.current) {
+      savedDataRef.current = canvasRef.current.getSaveData();
+    }
+    
+    // Clear background image state
+    setBackgroundImage(null);
+    setIsBackgroundImage(false);
+  };
+
   return (
     <Page title="Welcome" container={false} headerStyle="transparent">
       {/* Hero Section */}
@@ -127,6 +162,33 @@ const HomePage: React.FC = () => {
                     className="w-16 sm:w-24"
                   />
                 </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleBackgroundImageUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Add Image
+                </button>
+                {backgroundImage && (
+                  <button
+                    onClick={handleClearBackground}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Remove Image
+                  </button>
+                )}
                 <button
                   onClick={handleUndo}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-2 py-1 rounded text-sm"
@@ -147,6 +209,7 @@ const HomePage: React.FC = () => {
               <div className="lg:col-span-7 bg-gray-600 rounded-lg p-2 sm:p-4">
                 <div className="w-full overflow-x-hidden relative">
                   <CanvasDraw
+                    key={`canvas-${isBackgroundImage ? 'img' : 'no-img'}`}
                     ref={canvasRef}
                     brushColor={brushColor}
                     brushRadius={brushRadius}
@@ -154,6 +217,9 @@ const HomePage: React.FC = () => {
                     canvasHeight={Math.min(530, (window.innerWidth - 48) * 0.65)}
                     className="border border-gray-700 rounded bg-gray-400"
                     backgroundColor="rgb(217, 224, 229)"
+                    immediateLoading
+                    imgSrc={isBackgroundImage && backgroundImage ? backgroundImage : undefined}
+                    saveData={savedDataRef.current}
                   />
                 </div>
               </div>
