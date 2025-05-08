@@ -4,11 +4,12 @@ import { AssetProvider } from './context/AssetContext';
 import { TaskProvider } from './context/TaskContext';
 import StoryboardPage from './pages/StoryboardPage';
 import PreviewPage from './pages/PreviewPage';
-import HomePage from './pages/HomePage';
+import MenuPage from './pages/MenuPage';
 import AssetManager from './pages/AssetManager';
 import TaskBoardPage from './pages/TaskBoardPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import HomePage from './pages/HomePage1';
 
 const App = () => {
   return (
@@ -18,6 +19,7 @@ const App = () => {
           <TaskProvider>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/menu" element={<MenuPage />} />
               <Route path="/storyboard" element={<StoryboardPage />} />
               <Route path="/storyboard/preview" element={<PreviewPage />} />
               <Route path="/assets" element={<AssetManager />} />

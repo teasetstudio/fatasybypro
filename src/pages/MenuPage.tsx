@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import Page from '../components/layout/Page'
 
-const HomePage = () => {
+const MenuPage = () => {
   return (
     <Page title="Home">
       {/* Main Content */}
@@ -106,4 +106,4 @@ const HomePage = () => {
   )
 }
 
-export default HomePage
+export default MenuPage

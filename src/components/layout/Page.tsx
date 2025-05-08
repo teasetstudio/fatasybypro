@@ -4,9 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 interface PageProps {
   children: React.ReactNode;
   title?: string;
+  container?: boolean;
+  headerStyle?: 'default' | 'transparent';
 }
 
-const Page: React.FC<PageProps> = ({ children, title }) => {
+const Page: React.FC<PageProps> = ({ children, title, container = true, headerStyle = 'default' }) => {
   const location = useLocation();
 
   useEffect(() => {
@@ -27,76 +29,81 @@ const Page: React.FC<PageProps> = ({ children, title }) => {
     return location.pathname === path;
   };
 
+  const headerClasses = headerStyle === 'transparent' 
+    ? 'absolute top-0 left-0 right-0 z-50 bg-transparent'
+    : 'bg-white shadow-sm';
+
+  const linkClasses = (isActive: boolean) => {
+    const baseClasses = 'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium';
+    if (headerStyle === 'transparent') {
+      return `${baseClasses} ${
+        isActive 
+          ? 'border-white text-white' 
+          : 'border-transparent text-white/80 hover:border-white/50 hover:text-white'
+      }`;
+    }
+    return `${baseClasses} ${
+      isActive 
+        ? 'border-blue-500 text-gray-900' 
+        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+    }`;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm">
+      <nav className={headerClasses}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                <Link to="/" className="text-xl font-bold text-blue-600">
+                <Link 
+                  to="/" 
+                  className={`text-xl font-bold ${headerStyle === 'transparent' ? 'text-white' : 'text-blue-600'}`}
+                >
                   FantasyByPro
                 </Link>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <Link
                   to="/"
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    isActive('/') 
-                      ? 'border-blue-500 text-gray-900' 
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                  }`}
+                  className={linkClasses(isActive('/'))}
                 >
                   Home
                 </Link>
                 <Link
+                  to="/menu"
+                  className={linkClasses(isActive('/menu'))}
+                >
+                  Menu
+                </Link>
+                <Link
                   to="/storyboard"
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    isActive('/storyboard') 
-                      ? 'border-blue-500 text-gray-900' 
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                  }`}
+                  className={linkClasses(isActive('/storyboard'))}
                 >
                   Storyboard
                 </Link>
                 <Link
                   to="/assets"
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    isActive('/assets') 
-                      ? 'border-blue-500 text-gray-900' 
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                  }`}
+                  className={linkClasses(isActive('/assets'))}
                 >
                   Assets
                 </Link>
                 <Link
                   to="/tasks"
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    isActive('/tasks') 
-                      ? 'border-blue-500 text-gray-900' 
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                  }`}
+                  className={linkClasses(isActive('/tasks'))}
                 >
                   Tasks
                 </Link>
                 <Link
                   to="/about"
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    isActive('/about') 
-                      ? 'border-blue-500 text-gray-900' 
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                  }`}
+                  className={linkClasses(isActive('/about'))}
                 >
                   About
                 </Link>
                 <Link
                   to="/contact"
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    isActive('/contact') 
-                      ? 'border-blue-500 text-gray-900' 
-                      : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                  }`}
+                  className={linkClasses(isActive('/contact'))}
                 >
                   Contact
                 </Link>
@@ -107,7 +114,7 @@ const Page: React.FC<PageProps> = ({ children, title }) => {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main className={`${container ? 'max-w-7xl mx-auto py-6 sm:px-6 lg:px-8' : ''}`}>
         {children}
       </main>
 
