@@ -2,12 +2,16 @@ import React, { useRef, useState } from 'react';
 import Page from '../components/layout/Page';
 import { Link } from 'react-router-dom';
 import CanvasDraw from 'react-canvas-draw';
+import { smoothnessOptions } from '../components/DrawingTools';
 
 const HomePage: React.FC = () => {
   const canvasRef = useRef<CanvasDraw | null>(null);
   const [description, setDescription] = useState('');
   const [brushColor, setBrushColor] = useState('#000000');
   const [brushRadius, setBrushRadius] = useState(2);
+  const [brushSmoothness, setBrushSmoothness] = useState(smoothnessOptions[1].value); // Default to medium smoothness
+  const [isMouseOverCanvas, setIsMouseOverCanvas] = useState(false);
+
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +106,10 @@ const HomePage: React.FC = () => {
     }
   };
 
+  const handleSetMouseOverCanvas = (isMouseOver: boolean) => {
+    setIsMouseOverCanvas(isMouseOver);
+  };
+
   const handleClearBackground = () => {
     // Save current drawing state before removing background
     if (canvasRef.current) {
@@ -156,9 +164,20 @@ const HomePage: React.FC = () => {
                   <input
                     type="range"
                     min="1"
-                    max="10"
+                    max="100"
                     value={brushRadius}
                     onChange={(e) => setBrushRadius(Number(e.target.value))}
+                    className="w-16 sm:w-24"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <label className="text-gray-300 text-sm">Smoothness:</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={brushSmoothness}
+                    onChange={(e) => setBrushSmoothness(Number(e.target.value))}
                     className="w-16 sm:w-24"
                   />
                 </div>
@@ -207,12 +226,19 @@ const HomePage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-8">
               {/* Drawing Canvas */}
               <div className="lg:col-span-7 bg-gray-600 rounded-lg p-2 sm:p-4">
-                <div className="w-full overflow-x-hidden relative">
+                <div 
+                  className="w-full overflow-x-hidden relative"
+                  onMouseEnter={() => handleSetMouseOverCanvas(true)}
+                  onMouseLeave={() => handleSetMouseOverCanvas(false)}
+                  style={{ cursor: isMouseOverCanvas ? 'crosshair' : 'default' }}
+                >
                   <CanvasDraw
                     key={`canvas-${isBackgroundImage ? 'img' : 'no-img'}`}
                     ref={canvasRef}
-                    brushColor={brushColor}
-                    brushRadius={brushRadius}
+                    brushColor={isMouseOverCanvas ? brushColor : 'rgba(255, 255, 255, 0)'}
+                    brushRadius={isMouseOverCanvas ? brushRadius : 0}
+                    loadTimeOffset={0}
+                    lazyRadius={brushSmoothness}
                     canvasWidth={Math.min(810, window.innerWidth - 48)}
                     canvasHeight={Math.min(530, (window.innerWidth - 48) * 0.65)}
                     className="border border-gray-700 rounded bg-gray-400"
@@ -220,6 +246,7 @@ const HomePage: React.FC = () => {
                     immediateLoading
                     imgSrc={isBackgroundImage && backgroundImage ? backgroundImage : undefined}
                     saveData={savedDataRef.current}
+                    style={{ cursor: isMouseOverCanvas ? 'crosshair' : 'default' }}
                   />
                 </div>
               </div>
@@ -581,4 +608,4 @@ const HomePage: React.FC = () => {
   );
 };
 
-export default HomePage; 
+export default HomePage;

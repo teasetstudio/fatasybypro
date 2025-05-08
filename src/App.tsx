@@ -9,7 +9,7 @@ import AssetManager from './pages/AssetManager';
 import TaskBoardPage from './pages/TaskBoardPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
-import HomePage from './pages/HomePage1';
+import HomePage from './pages/HomePage';
 
 const App = () => {
   return (

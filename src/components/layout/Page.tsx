@@ -23,7 +23,7 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
 
     // Set the document title
     document.title = title ? `${title} | FantasyByPro` : `${pageName} | FantasyByPro`;
-  }, [location.pathname, title]);
+  }, [location.pathname]);
 
   const isActive = (path: string) => {
     return location.pathname === path;

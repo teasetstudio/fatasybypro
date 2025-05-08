@@ -3,7 +3,7 @@ import { Task, TaskStatus } from '../types/task';
 
 interface TaskContextType {
   tasks: Task[];
-  addTask: (task: Omit<Task, 'id'>) => void;
+  addTask: (task: Omit<Task, 'id'>) => Task;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   moveTask: (taskId: string, newStatus: TaskStatus) => void;
@@ -51,6 +51,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       id: Math.random().toString(36).substr(2, 9),
     };
     setTasks((prevTasks) => [...prevTasks, newTask]);
+    return newTask;
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {

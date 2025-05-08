@@ -21,7 +21,7 @@ const AppPage: React.FC<PageProps> = ({ children, title }) => {
 
     // Set the document title
     document.title = title ? `${title} | FantasyByPro` : `${pageName} | FantasyByPro`;
-  }, [location.pathname, title]);
+  }, [location.pathname]);
 
   return (
     <>
