@@ -9,6 +9,7 @@ import DrawingTools, { smoothnessOptions, aspectRatios } from '../components/Dra
 import PreviewFrameModal from '../components/PreviewFrameModal';
 import { IFrame } from '../components/types';
 import DraggableFrame from '../components/DraggableFrame';
+import AppPage from '../components/layout/AppPage';
 
 const StoryboardPage = () => {
   const {
@@ -275,92 +276,94 @@ const StoryboardPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Compact Header with Title and Drawing Tools */}
-      <div className="bg-white shadow-md w-full sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-            {/* Title */}
-            <div className="flex items-center space-x-4">
-              <Link to="/" className="text-gray-600 hover:text-gray-800">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-800 mb-3 md:mb-0">Storyboard Creator</h1>
-            </div>
-            
+    <AppPage title="Storyboard">
+      <div className="min-h-screen bg-gray-100">
+        {/* Compact Header with Title and Drawing Tools */}
+        <div className="bg-white shadow-md w-full sticky top-0 z-20">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+              {/* Title */}
+              <div className="flex items-center space-x-4">
+                <Link to="/" className="text-gray-600 hover:text-gray-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                </Link>
+                <h1 className="text-2xl font-bold text-gray-800 mb-3 md:mb-0">Storyboard Creator</h1>
+              </div>
+              
 
-            {/* Drawing Tools */}
-            <DrawingTools
-              brushColor={brushColor}
-              brushRadius={brushRadius}
-              brushSmoothness={brushSmoothness}
-              currentAspectRatio={currentAspectRatio}
-              setBrushColor={handleColorChange}
-              setBrushSize={handleBrushSizeChange}
-              onSmoothnessChange={handleSmoothnessChange}
-              onAspectRatioChange={handleAspectRatioChange}
-              onAddFrame={addFrame}
-            />
+              {/* Drawing Tools */}
+              <DrawingTools
+                brushColor={brushColor}
+                brushRadius={brushRadius}
+                brushSmoothness={brushSmoothness}
+                currentAspectRatio={currentAspectRatio}
+                setBrushColor={handleColorChange}
+                setBrushSize={handleBrushSizeChange}
+                onSmoothnessChange={handleSmoothnessChange}
+                onAspectRatioChange={handleAspectRatioChange}
+                onAddFrame={addFrame}
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="container-full mx-auto p-4 mt-4">
-        <div className="overflow-visible pb-4">
-          <DndContext onDragEnd={handleDragEnd}>
-            <div className="flex flex-wrap gap-6 justify-center p-4">
-              {frames.map((frame, index) => (
-                <DraggableFrame
-                  key={frame.id}
-                  frame={frame}
-                  index={index}
-                  brushColor={brushColor}
-                  brushRadius={brushRadius}
-                  brushSmoothness={brushSmoothness}
-                  onPreview={openPreviewModal}
-                />
-              ))}
-              {/* Always show Add Frame button in the flex container */}
-              <div className="flex items-center justify-center mb-6">
-                <button
-                  onClick={addFrame}
-                  className={`flex flex-col items-center justify-center bg-white bg-opacity-70 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition duration-200 ${currentAspectRatio.cardWidth} h-64`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                  <span className="text-blue-600 font-medium">Add Frame</span>
-                </button>
+        {/* Main Content */}
+        <div className="container-full mx-auto p-4 mt-4">
+          <div className="overflow-visible pb-4">
+            <DndContext onDragEnd={handleDragEnd}>
+              <div className="flex flex-wrap gap-6 justify-center p-4">
+                {frames.map((frame, index) => (
+                  <DraggableFrame
+                    key={frame.id}
+                    frame={frame}
+                    index={index}
+                    brushColor={brushColor}
+                    brushRadius={brushRadius}
+                    brushSmoothness={brushSmoothness}
+                    onPreview={openPreviewModal}
+                  />
+                ))}
+                {/* Always show Add Frame button in the flex container */}
+                <div className="flex items-center justify-center mb-6">
+                  <button
+                    onClick={addFrame}
+                    className={`flex flex-col items-center justify-center bg-white bg-opacity-70 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition duration-200 ${currentAspectRatio.cardWidth} h-64`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span className="text-blue-600 font-medium">Add Frame</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          </DndContext>
+            </DndContext>
+          </div>
         </div>
-      </div>
 
-      {/* Preview Modal */}
-      <PreviewFrameModal
-        frame={selectedFrame}
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onSave={saveModalChanges}
-        selectedFrameId={selectedFrameId}
-        frames={frames}
-        modalFrameRef={modalFrameRef}
-        currentAspectRatio={currentAspectRatio}
-        brushColor={brushColor}
-        brushRadius={brushRadius}
-        brushSmoothness={brushSmoothness}
-        handleColorChange={handleColorChange}
-        handleBrushSizeChange={handleBrushSizeChange}
-        handleSmoothnessChange={handleSmoothnessChange}
-        handleAspectRatioChange={handleAspectRatioChange}
-        addFrame={addFrame}
-        setFrames={setFrames}
-      />
-    </div>
+        {/* Preview Modal */}
+        <PreviewFrameModal
+          frame={selectedFrame}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+          onSave={saveModalChanges}
+          selectedFrameId={selectedFrameId}
+          frames={frames}
+          modalFrameRef={modalFrameRef}
+          currentAspectRatio={currentAspectRatio}
+          brushColor={brushColor}
+          brushRadius={brushRadius}
+          brushSmoothness={brushSmoothness}
+          handleColorChange={handleColorChange}
+          handleBrushSizeChange={handleBrushSizeChange}
+          handleSmoothnessChange={handleSmoothnessChange}
+          handleAspectRatioChange={handleAspectRatioChange}
+          addFrame={addFrame}
+          setFrames={setFrames}
+        />
+      </div>
+    </AppPage>
   );
 };
 

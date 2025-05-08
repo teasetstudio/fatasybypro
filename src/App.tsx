@@ -7,6 +7,8 @@ import PreviewPage from './pages/PreviewPage';
 import HomePage from './pages/HomePage';
 import AssetManager from './pages/AssetManager';
 import TaskBoardPage from './pages/TaskBoardPage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
 
 const App = () => {
   return (
@@ -20,6 +22,8 @@ const App = () => {
               <Route path="/storyboard/preview" element={<PreviewPage />} />
               <Route path="/assets" element={<AssetManager />} />
               <Route path="/tasks" element={<TaskBoardPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
             </Routes>
           </TaskProvider>
         </AssetProvider>
