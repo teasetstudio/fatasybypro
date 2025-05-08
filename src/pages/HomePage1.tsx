@@ -17,7 +17,7 @@ const HomePage: React.FC = () => {
     name: string; 
     status: 'todo' | 'in-progress' | 'done';
     assetId?: string;
-  }>>([{ id: '1', name: 'Task 1', status: 'in-progress', assetId: '1' }]);
+  }>>([{ id: '1', name: 'Model Main Character', status: 'in-progress', assetId: '1' }]);
   const [newAssetName, setNewAssetName] = useState('');
   const [newAssetType, setNewAssetType] = useState('character');
   const [newTaskName, setNewTaskName] = useState('');
