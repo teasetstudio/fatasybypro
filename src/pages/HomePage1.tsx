@@ -289,9 +289,12 @@ const HomePage: React.FC = () => {
                           className="p-2 bg-gray-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="character">Character</option>
+                          <option value="model">Model</option>
+                          <option value="animation">Animation</option>
                           <option value="prop">Prop</option>
-                          <option value="background">Background</option>
-                          <option value="effect">Effect</option>
+                          <option value="environment">Environment</option>
+                          <option value="effect">VFX Effect</option>
+                          <option value="other">Other</option>
                         </select>
                         <button
                           onClick={handleAddAsset}
