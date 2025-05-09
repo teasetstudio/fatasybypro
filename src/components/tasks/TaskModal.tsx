@@ -213,7 +213,7 @@ export default function TaskModal({
       assignee,
       dueDate: dueDate || undefined, // Make dueDate optional
     };
-    
+
     if (!initialTask) {
       (onSubmit as any)(newTask, selectedFrames, selectedTasks);
     }

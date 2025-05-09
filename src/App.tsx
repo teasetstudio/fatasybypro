@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { FramesProvider } from './context/FramesContext';
 import { AssetProvider } from './context/AssetContext';
 import { TaskProvider } from './context/TaskContext';
+import HomePage from './pages/HomePage';
 import StoryboardPage from './pages/StoryboardPage';
 import PreviewPage from './pages/PreviewPage';
 import MenuPage from './pages/MenuPage';
@@ -18,6 +19,7 @@ import CookiePolicyPage from './pages/CookiePolicyPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/TermsOfServicePage';
 import UserSettingsPage from './pages/UserSettingsPage';
+import ConsultationPage from './pages/ConsultationPage';
 
 const App: React.FC = () => {
   return (
@@ -27,6 +29,7 @@ const App: React.FC = () => {
           <TaskProvider>
             <Routes>
               <Route path="/" element={<WelcomePage />} />
+              <Route path="/home" element={<HomePage />} />
               <Route path="/menu" element={<MenuPage />} />
               <Route path="/storyboard" element={<StoryboardPage />} />
               <Route path="/storyboard/preview" element={<PreviewPage />} />
@@ -41,6 +44,7 @@ const App: React.FC = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/terms-of-service" element={<TermsOfServicePage />} />
               <Route path="/user-settings" element={<UserSettingsPage />} />
+              <Route path="/consultation" element={<ConsultationPage />} />
             </Routes>
           </TaskProvider>
         </AssetProvider>
