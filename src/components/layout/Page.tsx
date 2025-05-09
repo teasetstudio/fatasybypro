@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 interface PageProps {
@@ -10,6 +10,7 @@ interface PageProps {
 
 const Page: React.FC<PageProps> = ({ children, title, container = true, headerStyle = 'default' }) => {
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Get the page name from the current path
@@ -31,40 +32,43 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
 
   const headerClasses = headerStyle === 'transparent' 
     ? 'absolute top-0 left-0 right-0 z-50 bg-transparent'
-    : 'bg-white shadow-sm';
+    : 'bg-gray-900 shadow-lg';
 
   const linkClasses = (isActive: boolean) => {
-    const baseClasses = 'inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium';
+    const baseClasses = 'inline-flex items-center px-3 py-2 text-sm font-medium transition-colors duration-200';
     if (headerStyle === 'transparent') {
       return `${baseClasses} ${
         isActive 
-          ? 'border-white text-white' 
-          : 'border-transparent text-white/80 hover:border-white/50 hover:text-white'
+          ? 'text-white border-b-2 border-white' 
+          : 'text-white/80 hover:text-white hover:border-b-2 hover:border-white/50'
       }`;
     }
     return `${baseClasses} ${
       isActive 
-        ? 'border-blue-500 text-gray-900' 
-        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+        ? 'text-white border-b-2 border-blue-500' 
+        : 'text-gray-300 hover:text-white hover:border-b-2 hover:border-gray-500'
     }`;
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Navigation */}
       <nav className={headerClasses}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
-              <div className="flex-shrink-0 flex items-center">
-                <Link 
-                  to="/" 
-                  className={`text-xl font-bold ${headerStyle === 'transparent' ? 'text-white' : 'text-blue-600'}`}
-                >
-                  FantasyByPro
-                </Link>
-              </div>
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+            {/* Logo and Desktop Navigation */}
+            <div className="flex items-center">
+              <Link 
+                to="/" 
+                className={`text-xl font-bold ${headerStyle === 'transparent' ? 'text-white' : 'text-blue-500'}`}
+              >
+                FantasyByPro
+              </Link>
+              <div className="hidden md:flex md:ml-10 md:space-x-1">
                 <Link
                   to="/"
                   className={linkClasses(isActive('/'))}
@@ -106,6 +110,137 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
                   className={linkClasses(isActive('/contact'))}
                 >
                   Contact
+                </Link>
+              </div>
+            </div>
+
+            {/* Desktop Auth Buttons */}
+            <div className="hidden md:flex md:items-center md:space-x-4">
+              <Link
+                to="/signin"
+                className={linkClasses(isActive('/signin'))}
+              >
+                Sign in
+              </Link>
+              <Link
+                to="/signup"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              >
+                Sign up
+              </Link>
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="flex items-center md:hidden">
+              <button
+                onClick={toggleMobileMenu}
+                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                aria-expanded="false"
+              >
+                <span className="sr-only">Open main menu</span>
+                {/* Icon when menu is closed */}
+                <svg
+                  className={`${isMobileMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                {/* Icon when menu is open */}
+                <svg
+                  className={`${isMobileMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile menu */}
+        <div className={`${isMobileMenuOpen ? 'block' : 'hidden'} md:hidden bg-gray-800`}>
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+            <Link
+              to="/"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/') ? 'text-white bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Home
+            </Link>
+            <Link
+              to="/menu"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/menu') ? 'text-white bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Menu
+            </Link>
+            <Link
+              to="/storyboard"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/storyboard') ? 'text-white bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Storyboard
+            </Link>
+            <Link
+              to="/assets"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/assets') ? 'text-white bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Assets
+            </Link>
+            <Link
+              to="/tasks"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/tasks') ? 'text-white bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Tasks
+            </Link>
+            <Link
+              to="/about"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/about') ? 'text-white bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              About
+            </Link>
+            <Link
+              to="/contact"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${
+                isActive('/contact') ? 'text-white bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-700'
+              }`}
+            >
+              Contact
+            </Link>
+          </div>
+          <div className="pt-4 pb-3 border-t border-gray-700">
+            <div className="flex items-center px-5">
+              <div className="flex-shrink-0">
+                <Link
+                  to="/signin"
+                  className="block w-full px-5 py-3 text-center text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 rounded-md"
+                >
+                  Sign in
+                </Link>
+              </div>
+              <div className="ml-3">
+                <Link
+                  to="/signup"
+                  className="block w-full px-5 py-3 text-center text-base font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                >
+                  Sign up
                 </Link>
               </div>
             </div>
@@ -218,9 +353,9 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
                 © {new Date().getFullYear()} FantasyByPro. All rights reserved.
               </p>
               <div className="flex space-x-6">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Cookie Policy</a>
+                <Link to="/privacy-policy" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</Link>
+                <Link to="/terms-of-service" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</Link>
+                <Link to="/cookie-policy" className="text-gray-400 hover:text-white transition-colors text-sm">Cookie Policy</Link>
               </div>
             </div>
           </div>

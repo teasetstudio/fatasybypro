@@ -42,13 +42,6 @@ const StoryboardPage = () => {
   const [modalCanvasChanged, setModalCanvasChanged] = useState(false);
   const [currentModalCanvasData, setCurrentModalCanvasData] = useState<string | null>(null);
 
-  // Initialize with one frame
-  useEffect(() => {
-    if (frames.length === 0) {
-      addFrame();
-    }
-  }, []);
-
   // Add a function to handle drawing tool changes that preserves modal canvas state
   const handleDrawingToolChange = (action: () => void) => {
     // If modal is open, save current canvas state first

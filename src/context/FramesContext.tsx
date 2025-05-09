@@ -83,6 +83,14 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setCurrentAspectRatio,
   };
 
+  // Initialize with one frame
+  useEffect(() => {
+    if (framesDataRef.current.length === 0) {
+      addFrame();
+      addFrame();
+    }
+  }, []);
+
   return (
     <FramesContext.Provider value={value}>
       {children}

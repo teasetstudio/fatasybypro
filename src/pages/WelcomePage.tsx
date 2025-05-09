@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import CanvasDraw from 'react-canvas-draw';
 import { smoothnessOptions } from '../components/DrawingTools';
 
-const HomePage: React.FC = () => {
+const WelcomePage: React.FC = () => {
   const canvasRef = useRef<CanvasDraw | null>(null);
   const [description, setDescription] = useState('');
   const [brushColor, setBrushColor] = useState('#000000');
@@ -129,12 +129,31 @@ const HomePage: React.FC = () => {
           className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat opacity-80"
           style={{ backgroundImage: "url('/15.png')" }}
         />
-        <div className="relative z-10 text-center px-4 py-8 bg-black/50 backdrop-blur-sm rounded-xl">
-          <h1 className="text-5xl font-extrabold text-white mb-4 drop-shadow-lg">Welcome to FantasyByPro</h1>
-          <p className="text-lg text-white max-w-2xl mx-auto mb-4">
+        <div className="relative z-10 text-center px-6 py-12 bg-black/40 backdrop-blur-md rounded-2xl max-w-4xl mx-4">
+          <h1 className="text-6xl font-black text-white mb-6 drop-shadow-lg tracking-tight">
+            Welcome to FantasyByPro
+          </h1>
+          <p className="text-xl text-gray-200 max-w-2xl mx-auto mb-8 leading-relaxed">
             The all-in-one platform for animation and film professionals. <br />
-            <span className="font-semibold text-blue-300">Create. Organize. Collaborate. Succeed.</span>
+            <span className="font-semibold text-blue-400">Create. Organize. Collaborate. Succeed.</span>
           </p>
+          
+          <div className="flex flex-col items-center space-y-6">
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md">
+              <Link
+                to="/signup" 
+                className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                Start Creating Now
+              </Link>
+              <Link
+                to="/user-settings" 
+                className="w-full sm:w-auto px-10 py-4 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all duration-200 text-lg backdrop-blur-sm"
+              >
+                Sign In
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -608,4 +627,4 @@ const HomePage: React.FC = () => {
   );
 };
 
-export default HomePage;
+export default WelcomePage;
