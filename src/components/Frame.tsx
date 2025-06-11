@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 import { IFrame } from './types';
 import { useFrames } from '../context/FramesContext';
@@ -9,7 +9,7 @@ import { TaskStatus } from '../types/task';
 import FrameAssetAnalyzer from './FrameAssetAnalyzer';
 import CreateAssetModal from './CreateAssetModal';
 import ConfirmationModal from './ConfirmationModal';
-import { api } from '../services/api';
+import debounce from 'lodash.debounce';
 
 interface FrameProps {
   frame: IFrame;
@@ -175,14 +175,24 @@ const Frame = ({
     setIsDrawing(true);
   };
 
-  const handleDrawEnd = () => {
-    setIsDrawing(false);
-    console.log('handleDrawEnd')
-    if (canvasRef.current) {
-      savedDataRef.current = canvasRef.current.getSaveData();
-      updateFrame(frame.id, { canvas: canvasRef.current });
-    }
-  };
+  const handleDrawEnd = useCallback(
+    debounce(() => {
+      setIsDrawing(false);
+      console.log('handleDrawEnd')
+      if (canvasRef.current) {
+        savedDataRef.current = canvasRef.current.getSaveData();
+        updateFrame(frame.id, { canvas: canvasRef.current });
+      }
+    }, 300),
+    [frame.id, updateFrame]
+  );
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      handleDrawEnd.cancel();
+    };
+  }, [handleDrawEnd]);
 
   const saveCanvasData = () => {
     if (canvasRef.current) {
@@ -281,12 +291,13 @@ const Frame = ({
     setIsAssignTaskModalOpen(false);
   };
 
-  useEffect(() => {
-    if (canvasRef.current && frame.canvasData) {
-      // When frame's canvasData changes, load it into the canvas
-      canvasRef.current.loadSaveData(frame.canvasData, true);
-    }
-  }, [frame.canvasData]);
+  // useEffect(() => {
+  //   if (frame.canvasData && canvasRef.current) {
+  //     // When frame's canvasData changes, load it into the canvas
+  //     canvasRef.current.loadSaveData(frame.canvasData, true);
+  //     // savedDataRef.current = canvasRef.current.getSaveData();
+  //   }
+  // }, [frame.canvasData]);
 
   useEffect(() => {
     if (imageRef.current !== frame.image) {
@@ -440,8 +451,9 @@ const Frame = ({
           hideGrid
           immediateLoading
           imgSrc={getImageSrc()}
-          saveData={savedDataRef.current}
-          onChange={() => handleDrawEnd()}
+          // saveData={savedDataRef.current}
+          saveData={frame.canvasData}
+          onChange={handleDrawEnd}
         />
       </div>
 

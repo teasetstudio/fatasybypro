@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { IFrame } from '../components/types';
 import { createEmptyCanvasData } from '../components/frameUtils';
-import debounce from 'lodash.debounce';
+import debounce from 'lodash/debounce';
 import { aspectRatios } from '../components/DrawingTools';
 import { api } from '../services/api';
 
@@ -32,7 +32,7 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const debouncedSetFrames = useMemo(() => 
     debounce((newFrames: IFrame[]) => {
       setFrames([...newFrames]);
-    }, 300),
+    }, 1000),
     []
   );
 
@@ -133,44 +133,71 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [frames, projectId]);
 
   const updateFrame = useCallback((id: string, data: Partial<IFrame>) => {
-    if (framesDataRef.current && framesDataRef.current.length > 0) {
-      framesDataRef.current = framesDataRef.current.map((f) =>
-        f.id === id ? { ...f, ...data } : f
-      );
-      console.log('framesDataRef.current', framesDataRef.current)
-      debouncedSetFrames(framesDataRef.current);
-      
-      // Save individual frame with 10 second debounce
-      const frameToSave = framesDataRef.current.find(f => f.id === id);
-      if (frameToSave) {
-        debouncedSaveFrame(frameToSave);
-      }
-    }
-  }, [debouncedSetFrames, projectId]);
+      if (framesDataRef.current && framesDataRef.current.length > 0) {
+        const oldFrame = framesDataRef.current.find(f => f.id === id);
+        if (!oldFrame) return;
 
-  // Add debounced save frame function
-  const debouncedSaveFrame = useCallback(
-    debounce(async (frame: IFrame) => {
-      if (!projectId) {
-        console.error('No project ID available');
-        return;
-      }
-      try {
-        console.log('Saving frame:', frame);
-        const { data } = await api.put(`/projects/${projectId}/storyboard/update-frame`, {
-          id: frame.id,
-          description: frame.description,
-          image: frame.image,
-          canvasData: frame.canvas?.getSaveData()
+        // Check if there are actual changes
+        const hasChanges = Object.entries(data).some(([key, value]) => {
+          // Skip canvas property as it contains circular references
+          if (key === 'canvas') {
+            return oldFrame.canvas?.getSaveData() === data.canvas?.getSaveData();
+          }
+          return JSON.stringify(oldFrame[key as keyof IFrame]) !== JSON.stringify(value);
         });
 
-        console.log('Frame saved successfully:', data);
-      } catch (error) {
-        console.error('Error saving frame:', error);
+        const newFrame = { ...oldFrame, ...data };
+
+        framesDataRef.current = framesDataRef.current.map((f) =>
+          f.id === id ? newFrame : f
+        );
+
+        // All frames are updated at once and stored in framesDataRef.current
+        // debounce makes sense because we want to save all frames at once
+        // And reduce the number of rerenders
+        debouncedSetFrames(framesDataRef.current);
+
+        if (hasChanges) {
+          debouncedSaveFrame(newFrame);
+        }
       }
-    }, 1000), // 10 second delay
-    [projectId]
+    },
+    [debouncedSetFrames, projectId]
   );
+
+  const debouncedSaveFrames = useRef(new Map<string, ReturnType<typeof debounce>>());
+
+  const saveFrame = useCallback(async (frame: IFrame) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+    try {
+      const { data } = await api.put(`/projects/${projectId}/storyboard/update-frame`, {
+        id: frame.id,
+        description: frame.description,
+        image: frame.image,
+        canvasData: frame.canvas?.getSaveData()
+      });
+
+      console.log('Frame saved successfully:', data);
+    } catch (error) {
+      console.error('Error saving frame:', error);
+    }
+  }, [projectId]);
+
+  const debouncedSaveFrame = useCallback((frame: IFrame) => {
+    if (!debouncedSaveFrames.current.has(frame.id)) {
+      debouncedSaveFrames.current.set(
+        frame.id,
+        debounce(saveFrame, 100000)
+      );
+    }
+    const debouncedFn = debouncedSaveFrames.current.get(frame.id);
+    if (debouncedFn) {
+      debouncedFn(frame);
+    }
+  }, [saveFrame]);
 
   const changeFrameOrder = useCallback(async (frameId: string, newOrder: number) => {
     if (!projectId) {
@@ -257,12 +284,22 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [projectId]);
 
-  // Use useEffect cleanup to cancel pending debounced calls when component unmounts
-  // useEffect(() => {
-  //   return () => {
-  //     debouncedSetFrames.cancel();
-  //   };
-  // }, [debouncedSetFrames]);
+  // Cleanup debounced functions on unmount
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Execute any pending debounced saves
+      debouncedSaveFrames.current.forEach(debouncedFn => {
+        debouncedFn.flush();
+      });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      debouncedSetFrames.cancel();
+      debouncedSaveFrames.current.forEach(debouncedFn => debouncedFn.cancel());
+    };
+  }, [debouncedSetFrames]);
 
   const value = {
     frames,
