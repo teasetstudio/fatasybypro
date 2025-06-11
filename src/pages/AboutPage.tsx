@@ -5,8 +5,8 @@ import useScrollToTop from '../hooks/useScrollToTop';
 const AboutPage: React.FC = () => {
   useScrollToTop();
   return (
-    <Page title="About" container={false} headerStyle="transparent">
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <Page title="About">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
           <div className="relative mt-16">
             {/* Decorative elements */}

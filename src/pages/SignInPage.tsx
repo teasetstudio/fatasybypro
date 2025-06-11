@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Page from '../components/layout/Page';
+import { useAuth } from '../context/AuthContext';
 
 const SignInPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -11,8 +14,11 @@ const SignInPage: React.FC = () => {
 
   const [errors, setErrors] = useState({
     email: '',
-    password: ''
+    password: '',
+    general: ''
   });
+
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -32,7 +38,8 @@ const SignInPage: React.FC = () => {
   const validateForm = () => {
     const newErrors = {
       email: '',
-      password: ''
+      password: '',
+      general: ''
     };
     let isValid = true;
 
@@ -53,16 +60,28 @@ const SignInPage: React.FC = () => {
     return isValid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      // Handle sign in logic here
-      console.log('Form submitted:', formData);
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setErrors(prev => ({ ...prev, general: '' }));
+
+    try {
+      await login(formData.email, formData.password);
+      navigate('/organizations');
+    } catch (error: any) {
+      setErrors(prev => ({
+        ...prev,
+        general: error.response?.data?.message || 'An error occurred during login'
+      }));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Page title="Sign In" container={false} headerStyle="transparent">
+    <Page title="Sign In">
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full">
           <div className="relative">
@@ -83,6 +102,12 @@ const SignInPage: React.FC = () => {
                   </Link>
                 </p>
               </div>
+
+              {errors.general && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  {errors.general}
+                </div>
+              )}
 
               <form className="space-y-6" onSubmit={handleSubmit}>
                 <div className="space-y-4">
@@ -155,9 +180,12 @@ const SignInPage: React.FC = () => {
                 <div>
                   <button
                     type="submit"
-                    className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:-translate-y-0.5"
+                    disabled={isLoading}
+                    className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:-translate-y-0.5 ${
+                      isLoading ? 'opacity-75 cursor-not-allowed' : ''
+                    }`}
                   >
-                    Sign in
+                    {isLoading ? 'Signing in...' : 'Sign in'}
                   </button>
                 </div>
               </form>

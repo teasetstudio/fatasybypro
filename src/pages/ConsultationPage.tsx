@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import Page from '../components/layout/Page';
+import useScrollToTop from '../hooks/useScrollToTop';
 
 const ConsultationPage: React.FC = () => {
+  useScrollToTop();
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -29,8 +32,8 @@ const ConsultationPage: React.FC = () => {
   };
 
   return (
-    <Page title="Schedule a Consultation" container={false}>
-      <div className="min-h-screen bg-gray-900 py-12">
+    <Page title="Schedule a Consultation">
+      <div className="min-h-screen bg-gray-900 py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header Section */}
           <div className="text-center mb-12">

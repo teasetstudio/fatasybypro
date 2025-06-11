@@ -6,4 +6,9 @@ export interface IFrame {
   image: string | null;
   canvas?: CanvasDraw | null;
   canvasData?: string;
+  order: number;
+  name?: string;
+  duration?: number;
+  aspectRatio?: string;
+  status?: string;
 }

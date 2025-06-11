@@ -19,7 +19,7 @@ export const createEmptyCanvasData = (width: number, height: number) => {
   } catch (error) {
     console.error("Error creating empty canvas data:", error);
     // Fallback to hardcoded string if JSON.stringify fails
-    return '{"lines":[],"width":400,"height":400}';
+    return '{"lines":[],"width":420,"height":240}';
   }
 };
 

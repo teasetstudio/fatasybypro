@@ -10,9 +10,9 @@ export const smoothnessOptions = [
 
 // Define aspect ratio options with adjusted card widths
 export const aspectRatios = [
-  { name: '16:9', width: 420, height: 240, cardWidth: 'w-[450px]' }, // Wider card for 16:9
-  { name: '4:3', width: 240, height: 180, cardWidth: 'w-64' },
-  { name: '1:1', width: 230, height: 230, cardWidth: 'w-64' },
+  { name: '16:9', value: 'RATIO_16_9', width: 420, height: 240, cardWidth: 'w-[450px]' }, // Wider card for 16:9
+  { name: '4:3', value: 'RATIO_4_3', width: 240, height: 180, cardWidth: 'w-64' },
+  { name: '1:1', value: 'RATIO_1_1', width: 230, height: 230, cardWidth: 'w-64' },
 ];
 
 interface DrawingToolsProps {

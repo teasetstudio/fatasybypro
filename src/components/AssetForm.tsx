@@ -1,5 +1,5 @@
 import React from 'react';
-import { Asset, AssetType, AssetStatus } from '../types/asset';
+import { AssetType, AssetStatus } from '../types/asset';
 
 interface AssetFormProps {
   initialValues: {

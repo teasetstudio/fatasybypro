@@ -5,10 +5,9 @@ interface PageProps {
   children: React.ReactNode;
   title?: string;
   container?: boolean;
-  headerStyle?: 'default' | 'transparent';
 }
 
-const Page: React.FC<PageProps> = ({ children, title, container = true, headerStyle = 'default' }) => {
+const Page: React.FC<PageProps> = ({ children, title }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -16,7 +15,7 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
     // Get the page name from the current path
     const path = location.pathname;
     let pageName = 'Home';
-    
+
     if (path !== '/') {
       // Remove leading slash and capitalize first letter
       pageName = path.slice(1).split('/')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -30,24 +29,15 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
     return location.pathname === path;
   };
 
-  const headerClasses = headerStyle === 'transparent' 
-    ? 'absolute top-0 left-0 right-0 z-50 bg-transparent'
-    : 'bg-gray-900 shadow-lg';
+  const headerClasses = 'absolute top-0 left-0 right-0 z-50 bg-transparent'
 
   const linkClasses = (isActive: boolean) => {
     const baseClasses = 'inline-flex items-center px-3 py-2 text-sm font-medium transition-colors duration-200';
-    if (headerStyle === 'transparent') {
       return `${baseClasses} ${
         isActive 
           ? 'text-white border-b-2 border-white' 
           : 'text-white/80 hover:text-white hover:border-b-2 hover:border-white/50'
       }`;
-    }
-    return `${baseClasses} ${
-      isActive 
-        ? 'text-white border-b-2 border-blue-500' 
-        : 'text-gray-300 hover:text-white hover:border-b-2 hover:border-gray-500'
-    }`;
   };
 
   const toggleMobileMenu = () => {
@@ -64,7 +54,7 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
             <div className="flex items-center">
               <Link 
                 to="/" 
-                className={`text-xl font-bold ${headerStyle === 'transparent' ? 'text-white' : 'text-blue-500'}`}
+                className="text-xl font-bold text-white"
               >
                 FantasyByPro
               </Link>
@@ -249,7 +239,7 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
       </nav>
 
       {/* Main Content */}
-      <main className={`${container ? 'max-w-7xl mx-auto py-6 sm:px-6 lg:px-8' : ''}`}>
+      <main>
         {children}
       </main>
 
@@ -365,4 +355,4 @@ const Page: React.FC<PageProps> = ({ children, title, container = true, headerSt
   );
 };
 
-export default Page; 
+export default Page;

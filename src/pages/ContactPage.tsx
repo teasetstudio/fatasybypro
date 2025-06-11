@@ -30,7 +30,7 @@ const ContactPage: React.FC = () => {
   };
 
   return (
-    <Page title="Contact" container={false} headerStyle="transparent">
+    <Page title="Contact">
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <div className="relative mt-16">

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 interface PageProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ const AppPage: React.FC<PageProps> = ({ children, title }) => {
     // Get the page name from the current path
     const path = location.pathname;
     let pageName = 'Home';
-    
+
     if (path !== '/') {
       // Remove leading slash and capitalize first letter
       pageName = path.slice(1).split('/')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());

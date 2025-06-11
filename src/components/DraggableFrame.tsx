@@ -10,6 +10,7 @@ interface DraggableFrameProps {
   brushRadius: number;
   brushSmoothness: number;
   onPreview: (id: string) => void;
+  isDisabled?: boolean
 }
 
 const DraggableFrame = (props: DraggableFrameProps) => {
@@ -17,6 +18,7 @@ const DraggableFrame = (props: DraggableFrameProps) => {
 
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
     id: props.frame.id,
+    disabled: props.isDisabled,
   });
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({

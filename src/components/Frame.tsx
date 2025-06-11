@@ -4,10 +4,12 @@ import { IFrame } from './types';
 import { useFrames } from '../context/FramesContext';
 import { useAssets } from '../context/AssetContext';
 import { useTasks } from '../context/TaskContext';
-import { Asset, AssetType, AssetStatus } from '../types/asset';
-import { Task, TaskStatus } from '../types/task';
+import { AssetType, AssetStatus } from '../types/asset';
+import { TaskStatus } from '../types/task';
 import FrameAssetAnalyzer from './FrameAssetAnalyzer';
 import CreateAssetModal from './CreateAssetModal';
+import ConfirmationModal from './ConfirmationModal';
+import { api } from '../services/api';
 
 interface FrameProps {
   frame: IFrame;
@@ -35,7 +37,7 @@ const Frame = ({
   brushSmoothness,
   onPreview,
 }: FrameProps) => {
-  const { currentAspectRatio, updateFrame, deleteFrame } = useFrames();
+  const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage } = useFrames();
   const { assets, dependencies, addDependency, removeDependency, addAsset } = useAssets();
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
   const canvasRef = useRef<CanvasDraw | null>(null);
@@ -54,7 +56,10 @@ const Frame = ({
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
 
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingImage, setIsDeletingImage] = useState(false);
 
   // Get assigned assets for this frame
   const assignedAssets = assets.filter(asset => 
@@ -123,7 +128,7 @@ const Frame = ({
     }
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       // Save current drawing state before changing background
@@ -132,28 +137,38 @@ const Frame = ({
       }
       // set to false to force a re-render
       setIsBackgroundImage(false);
+      setIsImageLoading(true);
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const uploadedImage = e.target?.result as string;
-        imageRef.current = uploadedImage;
-        updateFrame(frame.id, { image: uploadedImage, canvas: canvasRef.current });
-        setIsBackgroundImage(true);
-      };
-      reader.readAsDataURL(file);
+      const imageUrl = await uploadImage(file);
+      
+      imageRef.current = imageUrl;
+      updateFrame(frame.id, { image: imageUrl, canvas: canvasRef.current });
+      setIsBackgroundImage(true);
+    
+      setIsImageLoading(false);
     }
   };
 
-  const removeBackgroundImage = () => {
+  const removeBackgroundImage = async () => {
     // Save current drawing state before removing background
     if (canvasRef.current) {
       savedDataRef.current = canvasRef.current.getSaveData();
     }
     
-    // Clear background image state
-    imageRef.current = null;
-    setIsBackgroundImage(false);
-    updateFrame(frame.id, { image: null, canvas: canvasRef.current });
+    setIsDeletingImage(true);
+    try {
+      // If there's an image URL, delete it from the server
+      if (frame.image) {
+        await deleteImage(frame.image);
+      }
+      
+      // Clear background image state
+      imageRef.current = null;
+      setIsBackgroundImage(false);
+      updateFrame(frame.id, { image: null, canvas: canvasRef.current });
+    } finally {
+      setIsDeletingImage(false);
+    }
   };
 
   const handleDrawStart = () => {
@@ -162,6 +177,7 @@ const Frame = ({
 
   const handleDrawEnd = () => {
     setIsDrawing(false);
+    console.log('handleDrawEnd')
     if (canvasRef.current) {
       savedDataRef.current = canvasRef.current.getSaveData();
       updateFrame(frame.id, { canvas: canvasRef.current });
@@ -177,7 +193,7 @@ const Frame = ({
       alert("Drawing saved to console. Check browser console for data.");
     }
   };
-  
+
   const downloadDrawing = () => {
     if (canvasRef.current) {
       try {
@@ -327,30 +343,49 @@ const Frame = ({
           </button>
 
           {/* Image Upload Controls */}
-          <label className="relative cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-              aria-label="Upload background image"
-            />
-            <span className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm inline-flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-              </svg>
-            </span>
-          </label>
-          {isBackgroundImage && (
+          {isBackgroundImage ? (
             <button
               onClick={removeBackgroundImage}
-              className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm inline-flex items-center"
+              disabled={isDeletingImage}
+              className={`bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm inline-flex items-center ${isDeletingImage ? 'opacity-50 cursor-not-allowed' : ''}`}
               aria-label="Remove background image"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
+              {isDeletingImage ? (
+                <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              )}
+              {isDeletingImage ? 'Deleting...' : 'Delete Image'}
             </button>
+          ) : (
+            <label className="relative cursor-pointer">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                aria-label="Upload background image"
+                disabled={isImageLoading}
+              />
+              <span className={`bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm inline-flex items-center ${isImageLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {isImageLoading ? (
+                  <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {isImageLoading ? 'Uploading...' : 'Upload Image'}
+              </span>
+            </label>
           )}
           <button
             onClick={() => setIsDeleteModalOpen(true)}
@@ -365,31 +400,25 @@ const Frame = ({
       </div>
 
       {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Delete Frame</h3>
-            <p className="text-gray-600 mb-6">Are you sure you want to delete this frame? This action cannot be undone.</p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  deleteFrame(frame.id);
-                  setIsDeleteModalOpen(false);
-                }}
-                className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        title="Delete Frame"
+        message="Are you sure you want to delete this frame? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={async () => {
+          setIsDeleting(true);
+          try {
+            await deleteFrame(frame.id);
+            setIsDeleteModalOpen(false);
+          } finally {
+            setIsDeleting(false);
+          }
+        }}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        variant="danger"
+        isLoading={isDeleting}
+      />
 
       {/* Canvas */}
       <div
@@ -635,7 +664,7 @@ const Frame = ({
                         )}
                       </div>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
                     </div>
                   ))}

@@ -35,14 +35,14 @@ const ForgotPasswordPage: React.FC = () => {
   };
 
   return (
-    <Page title="Forgot Password" container={false} headerStyle="transparent">
+    <Page title="Forgot Password">
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full">
           <div className="relative">
             {/* Decorative elements */}
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-30"></div>
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl"></div>
-            
+
             {/* Main card */}
             <div className="relative bg-gray-900/50 backdrop-blur-xl rounded-2xl p-8 border border-gray-700/50 shadow-2xl">
               <div className="text-center mb-8">
@@ -127,4 +127,4 @@ const ForgotPasswordPage: React.FC = () => {
   );
 };
 
-export default ForgotPasswordPage; 
+export default ForgotPasswordPage;

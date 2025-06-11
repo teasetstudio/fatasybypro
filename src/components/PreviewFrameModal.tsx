@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
-import DrawingTools from './DrawingTools';
+import DrawingTools, { aspectRatios } from './DrawingTools';
 import { IFrame } from './types';
 
 interface PreviewFrameModalProps {
@@ -12,7 +12,7 @@ interface PreviewFrameModalProps {
   selectedFrameId: string | null;
   frames: IFrame[];
   modalFrameRef: React.RefObject<IFrame>;
-  currentAspectRatio: { width: number; height: number; name: string; cardWidth: string };
+  currentAspectRatio: typeof aspectRatios[0];
   brushColor: string;
   brushRadius: number;
   brushSmoothness: number;

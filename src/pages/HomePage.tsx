@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 
 const HomePage: React.FC = () => {
   return (
-    <Page title="Home" container={false} headerStyle="transparent">
+    <Page title="Home">
       {/* Hero Section */}
       <div className="relative min-h-[100vh] flex items-center justify-center bg-black">
         <div 
@@ -356,7 +356,7 @@ const HomePage: React.FC = () => {
                   Custom training & onboarding
                 </li>
               </ul>
-              <Link to="/contact" className="block w-full text-center bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition-colors duration-200">
+              <Link to="/consultation" className="block w-full text-center bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-600 transition-colors duration-200">
                 Contact Sales
               </Link>
             </div>
