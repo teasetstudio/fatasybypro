@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
 
   if (!user) {

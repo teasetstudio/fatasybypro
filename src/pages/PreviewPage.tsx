@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useFrames } from '../context/FramesContext';
-import AppPage from '../components/layout/AppPage';
+import AppPage from '../components/layouts/AppPage';
 
 const PreviewPage = () => {
   const { frames } = useFrames();

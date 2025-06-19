@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 import useScrollToTop from '../hooks/useScrollToTop';
 
 const ContactPage: React.FC = () => {

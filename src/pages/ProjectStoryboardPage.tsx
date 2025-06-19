@@ -8,7 +8,7 @@ import DrawingTools, { smoothnessOptions, aspectRatios } from '../components/Dra
 import PreviewFrameModal from '../components/PreviewFrameModal';
 import { IFrame } from '../components/types';
 import DraggableFrame from '../components/DraggableFrame';
-import AppPage from '../components/layout/AppPage';
+import AppPage from '../components/layouts/AppPage';
 
 const ProjectStoryboardPage = () => {
   const { id: projectId } = useParams<{ id: string }>();
@@ -293,7 +293,7 @@ const ProjectStoryboardPage = () => {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
               {/* Title and Navigation */}
               <div className="flex items-center space-x-4">
-                <Link to={`/projects/${projectId}`} className="text-gray-600 hover:text-gray-800">
+                <Link to={`/dashboard/projects/${projectId}`} className="text-gray-600 hover:text-gray-800">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>

@@ -1,12 +1,15 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect, ReactNode } from 'react';
 import { IFrame } from '../components/types';
 import { createEmptyCanvasData } from '../components/frameUtils';
 import debounce from 'lodash/debounce';
 import { aspectRatios } from '../components/DrawingTools';
 import { api } from '../services/api';
+import { useLocation } from 'react-router-dom';
 
 interface FramesContextType {
   frames: IFrame[];
+  notSavedFrameIds: Map<string, string>;
+  flushDebouncedSaveFrame: (frameId: string) => void;
   framesDataRef: React.RefObject<IFrame[]>;
   addFrame: () => void;
   deleteFrame: (id: string) => void;
@@ -24,15 +27,19 @@ const FramesContext = createContext<FramesContextType | undefined>(undefined);
 
 export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const framesDataRef = useRef<IFrame[]>([]);
+  const debouncedSaveFrames = useRef(new Map<string, ReturnType<typeof debounce>>());
+
   const [frames, setFrames] = useState<IFrame[]>([]);
+  const [notSavedFrameIds, setNotSavedFrameIds] = useState<Map<string, string>>(new Map());
   const [projectId, setProjectId] = useState<string | null>(null);
   const [currentAspectRatio, setCurrentAspectRatio] = useState(aspectRatios[0]);
+  const location = useLocation();
 
   // Create a debounced function to update frames state
   const debouncedSetFrames = useMemo(() => 
     debounce((newFrames: IFrame[]) => {
       setFrames([...newFrames]);
-    }, 1000),
+    }, 300),
     []
   );
 
@@ -141,7 +148,7 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const hasChanges = Object.entries(data).some(([key, value]) => {
           // Skip canvas property as it contains circular references
           if (key === 'canvas') {
-            return oldFrame.canvas?.getSaveData() === data.canvas?.getSaveData();
+            return oldFrame.canvasData !== data.canvas?.getSaveData();
           }
           return JSON.stringify(oldFrame[key as keyof IFrame]) !== JSON.stringify(value);
         });
@@ -165,14 +172,17 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [debouncedSetFrames, projectId]
   );
 
-  const debouncedSaveFrames = useRef(new Map<string, ReturnType<typeof debounce>>());
-
   const saveFrame = useCallback(async (frame: IFrame) => {
     if (!projectId) {
       console.error('No project ID available');
       return;
     }
     try {
+      setNotSavedFrameIds(prev => {
+        const newMap = new Map(prev);
+        newMap.set(frame.id, 'saving');
+        return newMap;
+      });
       const { data } = await api.put(`/projects/${projectId}/storyboard/update-frame`, {
         id: frame.id,
         description: frame.description,
@@ -181,10 +191,24 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       console.log('Frame saved successfully:', data);
+      // Delete the debounced function after successful save
+      debouncedSaveFrames.current.delete(frame.id);
+      setNotSavedFrameIds(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(frame.id);
+        return newMap;
+      });
     } catch (error) {
       console.error('Error saving frame:', error);
     }
   }, [projectId]);
+
+  const flushDebouncedSaveFrame = (frameId: string) => {
+    const debouncedFn = debouncedSaveFrames.current.get(frameId);
+    if (debouncedFn) {
+      debouncedFn.flush();
+    }
+  };
 
   const debouncedSaveFrame = useCallback((frame: IFrame) => {
     if (!debouncedSaveFrames.current.has(frame.id)) {
@@ -192,6 +216,11 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         frame.id,
         debounce(saveFrame, 100000)
       );
+      setNotSavedFrameIds(prev => {
+        const newMap = new Map(prev);
+        newMap.set(frame.id, frame.id);
+        return newMap;
+      });
     }
     const debouncedFn = debouncedSaveFrames.current.get(frame.id);
     if (debouncedFn) {
@@ -286,8 +315,7 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Cleanup debounced functions on unmount
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Execute any pending debounced saves
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       debouncedSaveFrames.current.forEach(debouncedFn => {
         debouncedFn.flush();
       });
@@ -301,8 +329,20 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [debouncedSetFrames]);
 
+  // Flush debounced functions on navigation
+  useEffect(() => {
+    // Flush all pending saves
+    debouncedSaveFrames.current.forEach(debouncedFn => {
+      debouncedFn.flush();
+    });
+    // Clear the Map after flushing
+    debouncedSaveFrames.current.clear();
+  }, [location.pathname]); // This will trigger whenever the route changes
+
   const value = {
     frames,
+    notSavedFrameIds,
+    flushDebouncedSaveFrame,
     framesDataRef,
     addFrame,
     deleteFrame,

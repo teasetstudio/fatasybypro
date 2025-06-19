@@ -37,9 +37,9 @@ const Frame = ({
   brushSmoothness,
   onPreview,
 }: FrameProps) => {
-  const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage } = useFrames();
+  const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage, notSavedFrameIds, flushDebouncedSaveFrame } = useFrames();
   const { assets, dependencies, addDependency, removeDependency, addAsset } = useAssets();
-  const { tasks, addTask, updateTask, deleteTask } = useTasks();
+  const { tasks, addTask } = useTasks();
   const canvasRef = useRef<CanvasDraw | null>(null);
   const savedDataRef = useRef<string>(undefined);
   const imageRef = useRef<string | null>(null);
@@ -178,12 +178,11 @@ const Frame = ({
   const handleDrawEnd = useCallback(
     debounce(() => {
       setIsDrawing(false);
-      console.log('handleDrawEnd')
       if (canvasRef.current) {
         savedDataRef.current = canvasRef.current.getSaveData();
         updateFrame(frame.id, { canvas: canvasRef.current });
       }
-    }, 300),
+    }, 1000),
     [frame.id, updateFrame]
   );
 
@@ -291,14 +290,6 @@ const Frame = ({
     setIsAssignTaskModalOpen(false);
   };
 
-  // useEffect(() => {
-  //   if (frame.canvasData && canvasRef.current) {
-  //     // When frame's canvasData changes, load it into the canvas
-  //     canvasRef.current.loadSaveData(frame.canvasData, true);
-  //     // savedDataRef.current = canvasRef.current.getSaveData();
-  //   }
-  // }, [frame.canvasData]);
-
   useEffect(() => {
     if (imageRef.current !== frame.image) {
       imageRef.current = frame.image;
@@ -314,9 +305,46 @@ const Frame = ({
     <div 
       className={`flex flex-col bg-white rounded-lg shadow-md p-4 relative ${currentAspectRatio.cardWidth} mb-6`}
     >
-      {/* Frame number */}
-      <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md z-10">
-        {index + 1}
+      {/* Frame number and unsaved indicator container */}
+      <div className="absolute -top-3 -left-3 flex items-center gap-1 z-10">
+        <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md">
+          {index + 1}
+        </div>
+        {notSavedFrameIds.has(frame.id) && (
+          <div className="relative">
+            <button 
+              onClick={() => flushDebouncedSaveFrame(frame.id)}
+              disabled={notSavedFrameIds.get(frame.id) === 'saving'}
+              className={`w-6 h-6 rounded-full text-white flex items-center justify-center shadow-md transition-colors group/indicator ${
+                notSavedFrameIds.get(frame.id) === 'saving'
+                  ? 'bg-yellow-400 cursor-not-allowed'
+                  : 'bg-yellow-500 hover:bg-yellow-600 cursor-pointer'
+              }`}
+              title={notSavedFrameIds.get(frame.id) === 'saving' ? 'Saving changes...' : 'Click to save changes'}
+            >
+              {notSavedFrameIds.get(frame.id) === 'saving' ? (
+                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              )}
+              {/* Tooltip */}
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/indicator:opacity-100 group-hover/indicator:visible transition-all duration-200">
+                <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                  {notSavedFrameIds.get(frame.id) === 'saving' 
+                    ? 'Saving changes...' 
+                    : 'Unsaved changes. Wait 1 min or click here to save changes'}
+                </div>
+                {/* Tooltip arrow */}
+                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Canvas controls */}

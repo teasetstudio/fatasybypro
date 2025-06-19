@@ -1,10 +1,12 @@
 import React, { useRef, useState } from 'react';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 import { Link } from 'react-router-dom';
 import CanvasDraw from 'react-canvas-draw';
 import { smoothnessOptions } from '../components/DrawingTools';
+import { useAuth } from '../context/AuthContext';
 
 const WelcomePage: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
   const canvasRef = useRef<CanvasDraw | null>(null);
   const [description, setDescription] = useState('');
   const [brushColor, setBrushColor] = useState('#000000');
@@ -130,30 +132,45 @@ const WelcomePage: React.FC = () => {
           style={{ backgroundImage: "url('/15.png')" }}
         />
         <div className="relative z-10 text-center px-6 py-12 bg-black/40 backdrop-blur-md rounded-2xl max-w-4xl mx-4">
-          <h1 className="text-6xl font-black text-white mb-6 drop-shadow-lg tracking-tight">
-            Welcome to FantasyByPro
-          </h1>
-          <p className="text-xl text-gray-200 max-w-2xl mx-auto mb-8 leading-relaxed">
-            The all-in-one platform for animation and film professionals. <br />
-            <span className="font-semibold text-blue-400">Create. Organize. Collaborate. Succeed.</span>
-          </p>
-          
-          <div className="flex flex-col items-center space-y-6">
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md">
+          {isAuthenticated ? (
+            <div className="space-y-6">
+              <h1 className="text-4xl text-white">
+                Hello, <span className="text-blue-400">{user?.name}</span>.
+              </h1>
               <Link
-                to="/signup" 
-                className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                to="/dashboard/projects"
+                className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
               >
-                Start Creating Now
-              </Link>
-              <Link
-                to="/user-settings" 
-                className="w-full sm:w-auto px-10 py-4 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all duration-200 text-lg backdrop-blur-sm"
-              >
-                Sign In
+                Go to Dashboard
               </Link>
             </div>
-          </div>
+          ) : (
+            <>
+              <h1 className="text-6xl font-black text-white mb-6 drop-shadow-lg tracking-tight">
+                Welcome to FantasyByPro
+              </h1>
+              <p className="text-xl text-gray-200 max-w-2xl mx-auto mb-8 leading-relaxed">
+                The all-in-one platform for animation and film professionals. <br />
+                <span className="font-semibold text-blue-400">Create. Organize. Collaborate. Succeed.</span>
+              </p>
+              <div className="flex flex-col items-center space-y-6">
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full max-w-md">
+                  <Link
+                    to="/signup" 
+                    className="w-full sm:w-auto px-10 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-800 transition-all duration-200 text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                  >
+                    Start Creating Now
+                  </Link>
+                  <Link
+                    to="/user-settings" 
+                    className="w-full sm:w-auto px-10 py-4 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all duration-200 text-lg backdrop-blur-sm"
+                  >
+                    Sign In
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

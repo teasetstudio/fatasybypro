@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 interface PageProps {
   children: React.ReactNode;
@@ -10,6 +11,8 @@ interface PageProps {
 const Page: React.FC<PageProps> = ({ children, title }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
     // Get the page name from the current path
@@ -44,6 +47,16 @@ const Page: React.FC<PageProps> = ({ children, title }) => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const getUserInitials = () => {
+    if (!user?.name) return '?';
+    return user.name
+      .split(' ')
+      .map((word: string) => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <div className="min-h-screen">
       {/* Navigation */}
@@ -65,12 +78,12 @@ const Page: React.FC<PageProps> = ({ children, title }) => {
                 >
                   Home
                 </Link>
-                <Link
+                {/* <Link
                   to="/menu"
                   className={linkClasses(isActive('/menu'))}
                 >
                   Menu
-                </Link>
+                </Link> */}
                 <Link
                   to="/storyboard"
                   className={linkClasses(isActive('/storyboard'))}
@@ -106,19 +119,78 @@ const Page: React.FC<PageProps> = ({ children, title }) => {
 
             {/* Desktop Auth Buttons */}
             <div className="hidden md:flex md:items-center md:space-x-4">
-              <Link
-                to="/signin"
-                className={linkClasses(isActive('/signin'))}
-              >
-                Sign in
-              </Link>
-              <Link
-                to="/signup"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-              >
-                Sign up
-              </Link>
+              {isAuthenticated ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ease-in-out cursor-pointer shadow-md hover:shadow-lg"
+                  >
+                    <span className="font-medium text-sm">{getUserInitials()}</span>
+                  </button>
+                  
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 transform origin-top-right transition-all duration-200 ease-in-out z-20">
+                      <div className="py-1" role="menu" aria-orientation="vertical">
+                        <div className="px-4 py-2 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                          <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                        </div>
+                        <Link
+                          to="/dashboard/projects"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors duration-200 cursor-pointer"
+                          role="menuitem"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                        <Link
+                          to="/dashboard/user-settings"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors duration-200 cursor-pointer"
+                          role="menuitem"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          Settings
+                        </Link>
+                        <div className="border-t border-gray-100 my-1"></div>
+                        <button
+                          onClick={() => {
+                            logout();
+                            setIsUserMenuOpen(false);
+                          }}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 hover:text-red-700 transition-colors duration-200 cursor-pointer"
+                          role="menuitem"
+                        >
+                          Sign out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <Link
+                    to="/signin"
+                    className={linkClasses(isActive('/signin'))}
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
             </div>
+
+            {/* Add click outside handler to close menu */}
+            {isUserMenuOpen && (
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setIsUserMenuOpen(false)}
+              />
+            )}
 
             {/* Mobile menu button */}
             <div className="flex items-center md:hidden">

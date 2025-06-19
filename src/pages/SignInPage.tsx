@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 import { useAuth } from '../context/AuthContext';
 
 const SignInPage: React.FC = () => {
@@ -69,7 +69,7 @@ const SignInPage: React.FC = () => {
 
     try {
       await login(formData.email, formData.password);
-      navigate('/organizations');
+      navigate('/dashboard/organizations');
     } catch (error: any) {
       setErrors(prev => ({
         ...prev,

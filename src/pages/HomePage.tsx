@@ -1,5 +1,5 @@
 import React from 'react';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 import { Link } from 'react-router-dom';
 
 const HomePage: React.FC = () => {

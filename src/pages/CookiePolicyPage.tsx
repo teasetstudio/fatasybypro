@@ -1,5 +1,5 @@
 import React from 'react';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 import useScrollToTop from '../hooks/useScrollToTop';
 
 const CookiePolicyPage: React.FC = () => {

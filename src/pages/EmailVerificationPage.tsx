@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 
 const EmailVerificationPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -33,7 +33,7 @@ const EmailVerificationPage: React.FC = () => {
           setStatus('success');
           // Redirect to sign in after 3 seconds
           setTimeout(() => {
-            navigate('/signin');
+            // navigate('/signin');
           }, 3000);
         } else {
           setStatus('error');

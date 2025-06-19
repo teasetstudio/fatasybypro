@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import Page from '../components/layout/Page'
+import Page from '../components/layouts/Page'
 
 const MenuPage = () => {
   return (

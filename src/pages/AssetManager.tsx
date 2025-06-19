@@ -4,7 +4,7 @@ import { useAssets } from '../context/AssetContext';
 import CreateAssetModal from '../components/CreateAssetModal';
 import EditAssetModal from '../components/EditAssetModal';
 import { Link } from 'react-router-dom';
-import AppPage from '../components/layout/AppPage';
+import AppPage from '../components/layouts/AppPage';
 
 const AssetManager = () => {
   const [selectedType, setSelectedType] = useState<AssetType | 'all'>('all');

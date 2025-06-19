@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');

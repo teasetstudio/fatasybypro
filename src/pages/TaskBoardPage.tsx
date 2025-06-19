@@ -21,7 +21,7 @@ import {
 import TaskColumn from '../components/tasks/TaskColumn';
 import TaskModal from '../components/tasks/TaskModal';
 import { useTasks } from '../context/TaskContext';
-import AppPage from '../components/layout/AppPage';
+import AppPage from '../components/layouts/AppPage';
 import { Task, TaskStatus } from '../types/task';
 
 const TASK_STATUSES: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'BLOCKED', 'IN_REVIEW', 'DONE'];

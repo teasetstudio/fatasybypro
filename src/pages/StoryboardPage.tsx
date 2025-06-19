@@ -9,7 +9,7 @@ import DrawingTools, { smoothnessOptions, aspectRatios } from '../components/Dra
 import PreviewFrameModal from '../components/PreviewFrameModal';
 import { IFrame } from '../components/types';
 import DraggableFrame from '../components/DraggableFrame';
-import AppPage from '../components/layout/AppPage';
+import AppPage from '../components/layouts/AppPage';
 
 const StoryboardPage = () => {
   const {

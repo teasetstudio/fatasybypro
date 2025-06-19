@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Page from '../components/layout/Page';
+import Page from '../components/layouts/Page';
 import { useAuth } from '../context/AuthContext';
 
 const SignUpPage: React.FC = () => {
