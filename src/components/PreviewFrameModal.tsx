@@ -3,6 +3,8 @@ import CanvasDraw from 'react-canvas-draw';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import DrawingTools, { aspectRatios } from './DrawingTools';
 import { IFrame } from './types';
+import { getFileSizeError } from '../utils';
+import { useToast } from '../context/ToastContext';
 
 interface PreviewFrameModalProps {
   frame: IFrame | null;
@@ -44,10 +46,20 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
   setFrames,
 }) => {
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
+  const toast = useToast();
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file using utility function
+      const maxFileSize = 10 * 1024 * 1024; // 10MB
+      const fileError = getFileSizeError(file, maxFileSize);
+      if (fileError) {
+        toast.showToast(fileError, 'error');
+        event.target.value = '';
+        return;
+      }
+
       // Save current drawing state before changing background
       if (modalFrameRef.current.canvas) {
         modalFrameRef.current.canvasData = modalFrameRef.current.canvas.getSaveData();
@@ -61,6 +73,10 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
         modalFrameRef.current.image = uploadedImage;
         // updateGlobalFramesData(id, { image: uploadedImage, canvas: canvasRef.current });
         setIsBackgroundImage(true);
+      };
+      reader.onerror = () => {
+        toast.showToast('Error reading file. Please try again.', 'error');
+        event.target.value = '';
       };
       reader.readAsDataURL(file);
     }
@@ -170,19 +186,24 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
                     </button>
 
                     {/* Image Upload Controls */}
-                    <label className="relative cursor-pointer">
+                    <label className="relative cursor-pointer group">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
-                        aria-label="Upload background image"
+                        aria-label="Upload background image (max 10MB)"
                       />
                       <span className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm inline-flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                         </svg>
                       </span>
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10">
+                        Upload background image (max 10MB)
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                      </div>
                     </label>
                     {frame?.image && (
                       <button

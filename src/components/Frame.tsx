@@ -4,6 +4,7 @@ import { IFrame } from './types';
 import { useFrames } from '../context/FramesContext';
 import { useAssets } from '../context/AssetContext';
 import { useTasks } from '../context/TaskContext';
+import { useToast } from '../context/ToastContext';
 import { AssetType, AssetStatus } from '../types/asset';
 import { TaskStatus } from '../types/task';
 import FrameAssetAnalyzer from './FrameAssetAnalyzer';
@@ -40,6 +41,7 @@ const Frame = ({
   const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage, notSavedFrameIds, flushDebouncedSaveFrame } = useFrames();
   const { assets, dependencies, addDependency, removeDependency, addAsset } = useAssets();
   const { tasks, addTask } = useTasks();
+  const { showToast } = useToast();
   const canvasRef = useRef<CanvasDraw | null>(null);
   const savedDataRef = useRef<string>(undefined);
   const imageRef = useRef<string | null>(null);
@@ -139,13 +141,25 @@ const Frame = ({
       setIsBackgroundImage(false);
       setIsImageLoading(true);
 
-      const imageUrl = await uploadImage(file);
-      
-      imageRef.current = imageUrl;
-      updateFrame(frame.id, { image: imageUrl, canvas: canvasRef.current });
-      setIsBackgroundImage(true);
-    
-      setIsImageLoading(false);
+      try {
+        const imageUrl = await uploadImage(file);
+        
+        imageRef.current = imageUrl;
+        updateFrame(frame.id, { image: imageUrl, canvas: canvasRef.current });
+        setIsBackgroundImage(true);
+      } catch (error: any) {
+        // Show user-friendly error message
+        const errorMessage = error.message || 'Failed to upload image';
+        showToast(errorMessage, 'error');
+        
+        // Reset loading state
+        setIsBackgroundImage(false);
+        imageRef.current = null;
+      } finally {
+        setIsImageLoading(false);
+        // Reset the file input
+        event.target.value = '';
+      }
     }
   };
 
@@ -333,7 +347,7 @@ const Frame = ({
                 </svg>
               )}
               {/* Tooltip */}
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/indicator:opacity-100 group-hover/indicator:visible transition-all duration-200">
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/indicator:opacity-100 group-hover/indicator:visible transition-all duration-200 z-50">
                 <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
                   {notSavedFrameIds.get(frame.id) === 'saving' 
                     ? 'Saving changes...' 
@@ -402,13 +416,13 @@ const Frame = ({
               {isDeletingImage ? 'Deleting...' : 'Delete Image'}
             </button>
           ) : (
-            <label className="relative cursor-pointer">
+            <label className="relative cursor-pointer group/upload">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
                 className="hidden"
-                aria-label="Upload background image"
+                aria-label="Upload background image (max 10MB)"
                 disabled={isImageLoading}
               />
               <span className={`bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm inline-flex items-center ${isImageLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -424,6 +438,14 @@ const Frame = ({
                 )}
                 {isImageLoading ? 'Uploading...' : 'Upload Image'}
               </span>
+              {/* Tooltip */}
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/upload:opacity-100 group-hover/upload:visible transition-all duration-200 z-50">
+                <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                  Upload background image (max 10MB)
+                </div>
+                {/* Tooltip arrow */}
+                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+              </div>
             </label>
           )}
           <button

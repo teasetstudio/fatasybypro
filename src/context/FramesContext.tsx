@@ -5,6 +5,8 @@ import debounce from 'lodash/debounce';
 import { aspectRatios } from '../components/DrawingTools';
 import { api } from '../services/api';
 import { useLocation } from 'react-router-dom';
+import { getFileSizeError, TOAST_MESSAGES } from '../utils';
+import { useToast } from './ToastContext';
 
 interface FramesContextType {
   frames: IFrame[];
@@ -34,6 +36,7 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [projectId, setProjectId] = useState<string | null>(null);
   const [currentAspectRatio, setCurrentAspectRatio] = useState(aspectRatios[0]);
   const location = useLocation();
+  const { showSuccess } = useToast();
 
   // Create a debounced function to update frames state
   const debouncedSetFrames = useMemo(() => 
@@ -99,11 +102,12 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         framesDataRef.current.push(newFrame);
         setFrames([...framesDataRef.current]);
+        showSuccess(TOAST_MESSAGES.FRAME_CREATED);
       }
     } catch (error) {
       console.error('Error creating frame:', error);
     }
-  }, [projectId, frames.length, currentAspectRatio.name]);
+  }, [projectId, frames.length, currentAspectRatio.name, showSuccess]);
 
   const deleteFrame = useCallback(async (idToDelete: string) => {
     if (!projectId) {
@@ -134,10 +138,11 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       framesDataRef.current = updatedFrames;
       setFrames(updatedFrames);
+      showSuccess(TOAST_MESSAGES.FRAME_DELETED);
     } catch (error) {
       console.error('Error deleting frame:', error);
     }
-  }, [frames, projectId]);
+  }, [frames, projectId, showSuccess]);
 
   const updateFrame = useCallback((id: string, data: Partial<IFrame>) => {
       if (framesDataRef.current && framesDataRef.current.length > 0) {
@@ -279,7 +284,14 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const uploadImage = useCallback(async (image: File) => {
     if (!projectId) {
       console.error('No project ID available');
-      return;
+      throw new Error('No project ID available');
+    }
+
+    // Validate file using utility function
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    const fileError = getFileSizeError(image, maxFileSize);
+    if (fileError) {
+      throw new Error(fileError);
     }
 
     try {
@@ -294,12 +306,48 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       });
 
       const { imageUrl } = response.data;
+      showSuccess(TOAST_MESSAGES.IMAGE_UPLOADED);
       return imageUrl;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      // You might want to show an error message to the user here
+      
+      // Handle specific server errors
+      if (error.response?.data?.error) {
+        const serverError = error.response.data.error;
+        
+        // Check for Cloudinary file size limit error
+        if (serverError.includes('File size too large') && serverError.includes('cloudinary.com')) {
+          throw new Error('File size too large. Maximum size is 10MB for free accounts. Please compress your image or upgrade your plan.');
+        }
+        
+        // Check for other server-side file size errors
+        if (serverError.includes('File too large')) {
+          throw new Error('File size too large. Please compress your image before uploading.');
+        }
+        
+        // Check for file type errors
+        if (serverError.includes('Only image files are allowed')) {
+          throw new Error('Only image files are allowed. Please select a valid image file.');
+        }
+        
+        // Return the server error message
+        throw new Error(serverError);
+      }
+      
+      // Handle network errors
+      if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      
+      // Handle timeout errors
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        throw new Error('Upload timeout. Please try again with a smaller file or check your connection.');
+      }
+      
+      // Generic error fallback
+      throw new Error('Failed to upload image. Please try again.');
     }
-  }, [projectId]);
+  }, [projectId, showSuccess]);
 
   const deleteImage = useCallback(async (url: string) => {
     try {
@@ -309,11 +357,13 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       if (response.status !== 200) {
         console.error('Failed to delete image from server');
+      } else {
+        showSuccess(TOAST_MESSAGES.IMAGE_DELETED);
       }
     } catch (error) {
       console.error('Error deleting image:', error);
     }
-  }, [projectId]);
+  }, [showSuccess]);
 
   // Cleanup debounced functions on unmount
   useEffect(() => {

@@ -5,7 +5,7 @@ import { AssetProvider } from './context/AssetContext';
 import { TaskProvider } from './context/TaskContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OrganizationProvider } from './context/OrganizationContext';
-import ProtectedRoute from './components/ProtectedRoute';
+import { ToastProvider } from './context/ToastContext';
 import HomePage from './pages/HomePage';
 import StoryboardPage from './pages/StoryboardPage';
 import PreviewPage from './pages/PreviewPage';
@@ -56,47 +56,49 @@ const App: React.FC = () => {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<WelcomePage />} />
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/menu" element={<MenuPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/signin" element={<SignInPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/cookie-policy" element={<CookiePolicyPage />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          <Route path="/terms-of-service" element={<TermsOfServicePage />} />
-          <Route path="/verify-email" element={<EmailVerificationPage />} />
-          <Route path="consultation" element={<ConsultationPage />} />
+        <ToastProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<WelcomePage />} />
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/menu" element={<MenuPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/signin" element={<SignInPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/cookie-policy" element={<CookiePolicyPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms-of-service" element={<TermsOfServicePage />} />
+            <Route path="/verify-email" element={<EmailVerificationPage />} />
+            <Route path="consultation" element={<ConsultationPage />} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <AuthenticatedContent>
-                <DashboardLayout />
-              </AuthenticatedContent>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="organizations" element={<OrganizationsPage />} />
-            <Route path="organizations/:id" element={<OrganizationDetailsPage />} />
-            <Route path="projects" element={<ProjectsPage />} />
-            <Route path="projects/:id" element={<ProjectDetailsPage />} />
-            <Route path="projects/:id/storyboard" element={<ProjectStoryboardPage />} />
-            <Route path="storyboard" element={<StoryboardPage />} />
-            {/* <Route path="storyboard/preview" element={<PreviewPage />} /> */}
-            <Route path="assets" element={<AssetManager />} />
-            <Route path="tasks" element={<TaskBoardPage />} />
-            <Route path="user-settings" element={<UserSettingsPage />} />
-          </Route>
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <AuthenticatedContent>
+                  <DashboardLayout />
+                </AuthenticatedContent>
+              }
+            >
+              <Route index element={<DashboardPage />} />
+              <Route path="organizations" element={<OrganizationsPage />} />
+              <Route path="organizations/:id" element={<OrganizationDetailsPage />} />
+              <Route path="projects" element={<ProjectsPage />} />
+              <Route path="projects/:id" element={<ProjectDetailsPage />} />
+              <Route path="projects/:id/storyboard" element={<ProjectStoryboardPage />} />
+              <Route path="storyboard" element={<StoryboardPage />} />
+              {/* <Route path="storyboard/preview" element={<PreviewPage />} /> */}
+              <Route path="assets" element={<AssetManager />} />
+              <Route path="tasks" element={<TaskBoardPage />} />
+              <Route path="user-settings" element={<UserSettingsPage />} />
+            </Route>
 
-          {/* Redirect root to dashboard for authenticated users */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+            {/* Redirect root to dashboard for authenticated users */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );
