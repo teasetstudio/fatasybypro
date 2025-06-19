@@ -148,7 +148,9 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const hasChanges = Object.entries(data).some(([key, value]) => {
           // Skip canvas property as it contains circular references
           if (key === 'canvas') {
-            return oldFrame.canvasData !== data.canvas?.getSaveData();
+            const newCanvasData = data.canvas?.getSaveData();
+            data.canvasData = newCanvasData;
+            return oldFrame.canvasData !== newCanvasData;
           }
           return JSON.stringify(oldFrame[key as keyof IFrame]) !== JSON.stringify(value);
         });

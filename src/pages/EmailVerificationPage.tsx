@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Page from '../components/layouts/Page';
+import { api } from '../services/api';
 
 const EmailVerificationPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -19,17 +20,15 @@ const EmailVerificationPage: React.FC = () => {
       }
 
       try {
-        const response = await fetch('http://localhost:3001/api/auth/verify-email', {
-          method: 'POST',
-          headers: {
+        const response = await api.post('/api/auth/verify-email', { token }, {
+         headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ token }),
         });
 
-        const data = await response.json();
+        const data = response.data;
 
-        if (response.ok) {
+        if (response.status === 200) {
           setStatus('success');
           // Redirect to sign in after 3 seconds
           setTimeout(() => {
