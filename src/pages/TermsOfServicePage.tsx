@@ -3,7 +3,7 @@ import Page from '../components/layouts/Page';
 import useScrollToTop from '../hooks/useScrollToTop';
 
 const TermsOfServicePage: React.FC = () => {
-  useScrollToTop();
+  // useScrollToTop();
   
   return (
     <Page title="Terms of Service">

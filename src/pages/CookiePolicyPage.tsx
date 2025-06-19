@@ -3,7 +3,7 @@ import Page from '../components/layouts/Page';
 import useScrollToTop from '../hooks/useScrollToTop';
 
 const CookiePolicyPage: React.FC = () => {
-  useScrollToTop();
+  // useScrollToTop();
 
   return (
     <Page title="Cookie Policy">

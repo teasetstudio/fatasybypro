@@ -3,7 +3,7 @@ import Page from '../components/layouts/Page';
 import useScrollToTop from '../hooks/useScrollToTop';
 
 const ContactPage: React.FC = () => {
-  useScrollToTop();
+  // useScrollToTop();
 
   const [formData, setFormData] = useState({
     name: '',

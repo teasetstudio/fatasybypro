@@ -84,7 +84,7 @@ const Page: React.FC<PageProps> = ({ children, title }) => {
                 >
                   Menu
                 </Link> */}
-                <Link
+                {/* <Link
                   to="/storyboard"
                   className={linkClasses(isActive('/storyboard'))}
                 >
@@ -101,7 +101,7 @@ const Page: React.FC<PageProps> = ({ children, title }) => {
                   className={linkClasses(isActive('/tasks'))}
                 >
                   Tasks
-                </Link>
+                </Link> */}
                 <Link
                   to="/about"
                   className={linkClasses(isActive('/about'))}
