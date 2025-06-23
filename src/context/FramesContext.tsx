@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { IFrame } from '../components/types';
-import { createEmptyCanvasData } from '../components/frameUtils';
 import debounce from 'lodash/debounce';
 import { aspectRatios } from '../components/DrawingTools';
 import { api } from '../services/api';
@@ -13,6 +12,7 @@ interface FramesContextType {
   notSavedFrameIds: Map<string, string>;
   flushDebouncedSaveFrame: (frameId: string) => void;
   framesDataRef: React.RefObject<IFrame[]>;
+  getFrameRefData: (frameId: string) => IFrame | undefined;
   addFrame: () => void;
   deleteFrame: (id: string) => void;
   updateFrame: (id: string, data: Partial<IFrame>) => void;
@@ -51,7 +51,7 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const { data } = await api.get(`/projects/${projectId}/storyboard`);
       
       if (data && data.frames) {
-        const formattedFrames = data.frames.map((frame: any) => ({
+        const formattedFrames = data.frames.map((frame: IFrame) => ({
           id: frame.id,
           description: frame.description || '',
           image: frame.image,
@@ -107,7 +107,7 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     } catch (error) {
       console.error('Error creating frame:', error);
     }
-  }, [projectId, frames.length, currentAspectRatio.name, showSuccess]);
+  }, [projectId, frames.length, showSuccess]);
 
   const deleteFrame = useCallback(async (idToDelete: string) => {
     if (!projectId) {
@@ -144,6 +144,55 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [frames, projectId, showSuccess]);
 
+  const saveFrame = useCallback(async (frame: IFrame) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+    try {
+      setNotSavedFrameIds(prev => {
+        const newMap = new Map(prev);
+        newMap.set(frame.id, 'saving');
+        return newMap;
+      });
+      const { data } = await api.put(`/projects/${projectId}/storyboard/update-frame`, {
+        id: frame.id,
+        description: frame.description,
+        image: frame.image,
+        canvasData: frame.canvas?.getSaveData()
+      });
+
+      console.log('Frame saved successfully:', data);
+      // Delete the debounced function after successful save
+      debouncedSaveFrames.current.delete(frame.id);
+      setNotSavedFrameIds(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(frame.id);
+        return newMap;
+      });
+    } catch (error) {
+      console.error('Error saving frame:', error);
+    }
+  }, [projectId]);
+
+  const debouncedSaveFrame = useCallback((frame: IFrame) => {
+    if (!debouncedSaveFrames.current.has(frame.id)) {
+      debouncedSaveFrames.current.set(
+        frame.id,
+        debounce(saveFrame, 100000)
+      );
+      setNotSavedFrameIds(prev => {
+        const newMap = new Map(prev);
+        newMap.set(frame.id, frame.id);
+        return newMap;
+      });
+    }
+    const debouncedFn = debouncedSaveFrames.current.get(frame.id);
+    if (debouncedFn) {
+      debouncedFn(frame);
+    }
+  }, [saveFrame]);
+
   const updateFrame = useCallback((id: string, data: Partial<IFrame>) => {
       if (framesDataRef.current && framesDataRef.current.length > 0) {
         const oldFrame = framesDataRef.current.find(f => f.id === id);
@@ -176,39 +225,8 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
     },
-    [debouncedSetFrames, projectId]
+    [debouncedSetFrames, debouncedSaveFrame]
   );
-
-  const saveFrame = useCallback(async (frame: IFrame) => {
-    if (!projectId) {
-      console.error('No project ID available');
-      return;
-    }
-    try {
-      setNotSavedFrameIds(prev => {
-        const newMap = new Map(prev);
-        newMap.set(frame.id, 'saving');
-        return newMap;
-      });
-      const { data } = await api.put(`/projects/${projectId}/storyboard/update-frame`, {
-        id: frame.id,
-        description: frame.description,
-        image: frame.image,
-        canvasData: frame.canvas?.getSaveData()
-      });
-
-      console.log('Frame saved successfully:', data);
-      // Delete the debounced function after successful save
-      debouncedSaveFrames.current.delete(frame.id);
-      setNotSavedFrameIds(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(frame.id);
-        return newMap;
-      });
-    } catch (error) {
-      console.error('Error saving frame:', error);
-    }
-  }, [projectId]);
 
   const flushDebouncedSaveFrame = (frameId: string) => {
     const debouncedFn = debouncedSaveFrames.current.get(frameId);
@@ -216,24 +234,6 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       debouncedFn.flush();
     }
   };
-
-  const debouncedSaveFrame = useCallback((frame: IFrame) => {
-    if (!debouncedSaveFrames.current.has(frame.id)) {
-      debouncedSaveFrames.current.set(
-        frame.id,
-        debounce(saveFrame, 100000)
-      );
-      setNotSavedFrameIds(prev => {
-        const newMap = new Map(prev);
-        newMap.set(frame.id, frame.id);
-        return newMap;
-      });
-    }
-    const debouncedFn = debouncedSaveFrames.current.get(frame.id);
-    if (debouncedFn) {
-      debouncedFn(frame);
-    }
-  }, [saveFrame]);
 
   const changeFrameOrder = useCallback(async (frameId: string, newOrder: number) => {
     if (!projectId) {
@@ -310,26 +310,26 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return imageUrl;
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      
+
       // Handle specific server errors
       if (error.response?.data?.error) {
         const serverError = error.response.data.error;
-        
+
         // Check for Cloudinary file size limit error
         if (serverError.includes('File size too large') && serverError.includes('cloudinary.com')) {
           throw new Error('File size too large. Maximum size is 10MB for free accounts. Please compress your image or upgrade your plan.');
         }
-        
+
         // Check for other server-side file size errors
         if (serverError.includes('File too large')) {
           throw new Error('File size too large. Please compress your image before uploading.');
         }
-        
+
         // Check for file type errors
         if (serverError.includes('Only image files are allowed')) {
           throw new Error('Only image files are allowed. Please select a valid image file.');
         }
-        
+
         // Return the server error message
         throw new Error(serverError);
       }
@@ -365,9 +365,13 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [showSuccess]);
 
+  const getFrameRefData = (frameId: string) => {
+    return framesDataRef.current.find(f => f.id === frameId);
+  }
+
   // Cleanup debounced functions on unmount
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+    const handleBeforeUnload = () => {
       debouncedSaveFrames.current.forEach(debouncedFn => {
         debouncedFn.flush();
       });
@@ -377,7 +381,6 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       debouncedSetFrames.cancel();
-      debouncedSaveFrames.current.forEach(debouncedFn => debouncedFn.cancel());
     };
   }, [debouncedSetFrames]);
 
@@ -396,6 +399,7 @@ export const FramesProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     notSavedFrameIds,
     flushDebouncedSaveFrame,
     framesDataRef,
+    getFrameRefData,
     addFrame,
     deleteFrame,
     updateFrame,

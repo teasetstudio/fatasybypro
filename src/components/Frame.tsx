@@ -1,14 +1,8 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 import { IFrame } from './types';
 import { useFrames } from '../context/FramesContext';
-import { useAssets } from '../context/AssetContext';
-import { useTasks } from '../context/TaskContext';
 import { useToast } from '../context/ToastContext';
-import { AssetType, AssetStatus } from '../types/asset';
-import { TaskStatus } from '../types/task';
-import FrameAssetAnalyzer from './FrameAssetAnalyzer';
-import CreateAssetModal from './CreateAssetModal';
 import ConfirmationModal from './ConfirmationModal';
 import debounce from 'lodash.debounce';
 
@@ -21,15 +15,6 @@ interface FrameProps {
   onPreview: (id: string) => void;
 }
 
-interface Dependency {
-  id: string;
-  sourceAssetId: string;
-  targetAssetId: string;
-  relationshipType: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 const Frame = ({
   frame,
   index,
@@ -38,24 +23,13 @@ const Frame = ({
   brushSmoothness,
   onPreview,
 }: FrameProps) => {
-  const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage, notSavedFrameIds, flushDebouncedSaveFrame } = useFrames();
-  const { assets, dependencies, addDependency, removeDependency, addAsset } = useAssets();
-  const { tasks, addTask } = useTasks();
+  const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage, notSavedFrameIds, flushDebouncedSaveFrame, getFrameRefData } = useFrames();
   const { showToast } = useToast();
   const canvasRef = useRef<CanvasDraw | null>(null);
   const savedDataRef = useRef<string>(undefined);
   const imageRef = useRef<string | null>(null);
   const [localDescription, setLocalDescription] = useState(frame.description);
-  const [selectedAssetType, setSelectedAssetType] = useState<AssetType | 'all'>('all');
-  const [isAssetSelectorOpen, setIsAssetSelectorOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  const [isAssignTaskModalOpen, setIsAssignTaskModalOpen] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskDescription, setNewTaskDescription] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
-  const [newTaskDueDate, setNewTaskDueDate] = useState('');
 
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
@@ -63,54 +37,9 @@ const Frame = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
 
-  // Get assigned assets for this frame
-  const assignedAssets = assets.filter(asset => 
-    dependencies.some((dep: Dependency) => 
-      dep.sourceAssetId === asset.id && 
-      dep.targetAssetId === frame.id && 
-      dep.relationshipType === 'used_in'
-    )
-  );
-
-  // Filter assets based on selected type and exclude already assigned ones
-  const filteredAssets = (selectedAssetType === 'all' 
-    ? assets 
-    : assets.filter(asset => asset.type === selectedAssetType)
-  ).filter(asset => !assignedAssets.some(assigned => assigned.id === asset.id));
-
-  // Get tasks associated with this frame
-  const frameTasks = tasks.filter(task => 
-    dependencies.some((dep: Dependency) => 
-      dep.sourceAssetId === task.id && 
-      dep.targetAssetId === frame.id && 
-      dep.relationshipType === 'task_in'
-    )
-  );
-
-  // Get tasks that are not already assigned to this frame
-  const availableTasks = tasks.filter(task => 
-    !dependencies.some((dep: Dependency) => 
-      dep.sourceAssetId === task.id && 
-      dep.targetAssetId === frame.id && 
-      dep.relationshipType === 'task_in'
-    )
-  );
-
-  const handleAssetAssign = (assetId: string) => {
-    addDependency(assetId, frame.id, 'used_in');
-    setIsAssetSelectorOpen(false);
-  };
-
-  const handleAssetUnassign = (assetId: string) => {
-    removeDependency(assetId, frame.id);
-  };
-
   const handleClear = () => {
     if (canvasRef.current) {
       canvasRef.current.clear();
-      // save data is empty after clear()
-      const savedData = canvasRef.current.getSaveData();
-      savedDataRef.current = savedData;
       imageRef.current = null;
       updateFrame(frame.id, { image: null, canvas: canvasRef.current });
       setIsBackgroundImage(false);
@@ -133,10 +62,6 @@ const Frame = ({
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Save current drawing state before changing background
-      if (canvasRef.current) {
-        savedDataRef.current = canvasRef.current.getSaveData();
-      }
       // set to false to force a re-render
       setIsBackgroundImage(false);
       setIsImageLoading(true);
@@ -164,11 +89,6 @@ const Frame = ({
   };
 
   const removeBackgroundImage = async () => {
-    // Save current drawing state before removing background
-    if (canvasRef.current) {
-      savedDataRef.current = canvasRef.current.getSaveData();
-    }
-    
     setIsDeletingImage(true);
     try {
       // If there's an image URL, delete it from the server
@@ -189,32 +109,15 @@ const Frame = ({
     setIsDrawing(true);
   };
 
-  const handleDrawEnd = useCallback(
-    debounce(() => {
-      setIsDrawing(false);
-      if (canvasRef.current) {
-        savedDataRef.current = canvasRef.current.getSaveData();
-        updateFrame(frame.id, { canvas: canvasRef.current });
-      }
-    }, 1000),
-    [frame.id, updateFrame]
-  );
-
-  // Cleanup debounced function on unmount
-  useEffect(() => {
-    return () => {
-      handleDrawEnd.cancel();
-    };
-  }, [handleDrawEnd]);
-
-  const saveCanvasData = () => {
+  const debouncedHandleDrawEnd = useCallback(debounce(() => {
     if (canvasRef.current) {
-      const data = canvasRef.current.getSaveData();
-      // setSavedDrawing(data);
-      savedDataRef.current = data;
-      updateFrame(frame.id, { canvas: canvasRef.current, image: imageRef.current });
-      alert("Drawing saved to console. Check browser console for data.");
+      updateFrame(frame.id, { canvas: canvasRef.current });
     }
+  }, 50), [frame.id, updateFrame]);
+
+  const handleDrawEnd = () => {
+    setIsDrawing(false);
+    debouncedHandleDrawEnd()
   };
 
   const downloadDrawing = () => {
@@ -262,48 +165,6 @@ const Frame = ({
     return undefined;
   };
 
-  const handleCreateAsset = (name: string, type: AssetType, status: AssetStatus) => {
-    addAsset({
-      name,
-      type,
-      status,
-      description: '',
-    });
-    setIsCreateModalOpen(false);
-  };
-
-  const handleCreateTask = () => {
-    if (newTaskTitle.trim()) {
-      const newTask = {
-        title: newTaskTitle,
-        description: newTaskDescription,
-        status: 'TODO' as TaskStatus,
-        priority: newTaskPriority,
-        assignee: '',
-        dueDate: newTaskDueDate,
-      };
-      
-      const createdTask = addTask(newTask);
-      addDependency(createdTask.id, frame.id, 'task_in');
-      
-      // Reset form
-      setNewTaskTitle('');
-      setNewTaskDescription('');
-      setNewTaskPriority('Medium');
-      setNewTaskDueDate('');
-      setIsTaskModalOpen(false);
-    }
-  };
-
-  const handleDeleteTask = (taskId: string) => {
-    removeDependency(taskId, frame.id);
-  };
-
-  const handleAssignTask = (taskId: string) => {
-    addDependency(taskId, frame.id, 'task_in');
-    setIsAssignTaskModalOpen(false);
-  };
-
   useEffect(() => {
     if (imageRef.current !== frame.image) {
       imageRef.current = frame.image;
@@ -314,6 +175,28 @@ const Frame = ({
       }, 10)
     }
   }, [frame.image]);
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    return () => {
+      debouncedHandleDrawEnd.cancel();
+    };
+  }, [debouncedHandleDrawEnd]);
+
+  // const saveData = useMemo(() => {
+  //   return getFrameRefData(frame.id)?.canvasData;
+  // }, []); // Important to never update this, CanvasDraw will be failing when reading x (try to draw fast and with small delay)
+
+  // Cleanup debounced function on unmount
+  useEffect(() => {
+    if (canvasRef.current) {
+      const savedData = getFrameRefData(frame.id)?.canvasData;
+      if (savedData) {
+        savedDataRef.current = savedData;
+        canvasRef.current.loadSaveData(savedData);
+      }
+    }
+  }, []);
 
   return (
     <div 
@@ -501,8 +384,8 @@ const Frame = ({
           hideGrid
           immediateLoading
           imgSrc={getImageSrc()}
-          // saveData={savedDataRef.current}
-          saveData={frame.canvasData}
+          saveData={savedDataRef.current}
+          loadTimeOffset={100}
           onChange={handleDrawEnd}
         />
       </div>
@@ -514,309 +397,6 @@ const Frame = ({
         placeholder="Enter description"
         className="w-full h-24 p-2 border border-gray-300 rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       />
-
-      {/* Asset Assignment Section */}
-      <div className="mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="text-sm font-semibold text-gray-700">Assigned Assets</h4>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsAssetSelectorOpen(!isAssetSelectorOpen)}
-              className="text-sm text-blue-600 hover:text-blue-700"
-          >
-              {isAssetSelectorOpen ? 'Cancel' : 'Assign Asset'}
-            </button>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              Create Asset
-            </button>
-          </div>
-        </div>
-
-        {/* Asset Selector */}
-        {isAssetSelectorOpen && (
-          <div className="mb-4 p-3 bg-gray-50 rounded">
-            <div className="mb-2">
-              <select
-                value={selectedAssetType}
-                onChange={(e) => setSelectedAssetType(e.target.value as AssetType | 'all')}
-                className="w-full p-2 border border-gray-300 rounded text-sm"
-              >
-                <option value="all">All Types</option>
-                <option value="character">Characters</option>
-                <option value="model">Models</option>
-                <option value="animation">Animations</option>
-                <option value="vfx">VFX</option>
-                <option value="environment">Environments</option>
-                <option value="prop">Props</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div className="max-h-40 overflow-y-auto">
-              {filteredAssets.length > 0 ? (
-                <>
-                  {filteredAssets.map(asset => (
-                    <div
-                      key={asset.id}
-                      className="flex items-center justify-between p-2 hover:bg-gray-100 rounded cursor-pointer"
-                      onClick={() => handleAssetAssign(asset.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleAssetAssign(asset.id);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      <span className="text-sm">{asset.name}</span>
-                      <span className="text-xs text-gray-500 capitalize">{asset.type}</span>
-                    </div>
-                  ))}
-                  <div className="border-t border-gray-200 my-2"></div>
-                </>
-              ) : (
-                <div className="text-center p-4">
-                  <p className="text-gray-500 mb-3">No available assets to assign.</p>
-                </div>
-              )}
-              <div className="text-center p-2">
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                >
-                  Create New Asset
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Assigned Assets List */}
-        <div className="space-y-2">
-          {assignedAssets.map(asset => (
-            <div key={asset.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-              <div>
-                <span className="text-sm font-medium">{asset.name}</span>
-                <span className="text-xs text-gray-500 ml-2 capitalize">{asset.type}</span>
-              </div>
-              <button
-                onClick={() => handleAssetUnassign(asset.id)}
-                className="text-red-500 hover:text-red-600"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Create Asset Modal */}
-      <CreateAssetModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={handleCreateAsset}
-        assetTypes={['character', 'model', 'animation', 'vfx', 'environment', 'prop', 'other']}
-        defaultAssetType={selectedAssetType === 'all' ? 'character' : selectedAssetType as AssetType}
-      />
-
-      {/* Tasks Section */}
-      <div className="mt-4">
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="text-sm font-semibold text-gray-700">Tasks</h4>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setIsAssignTaskModalOpen(true)}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              Assign Task
-            </button>
-            <button
-              onClick={() => setIsTaskModalOpen(true)}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              Create Task
-            </button>
-          </div>
-        </div>
-
-        {/* Task List */}
-        <div className="space-y-2">
-          {frameTasks.map(task => (
-            <div key={task.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{task.title}</span>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    task.priority === 'High' ? 'bg-red-100 text-red-700' :
-                    task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    {task.priority}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    task.status === 'TODO' ? 'bg-gray-100 text-gray-700' :
-                    task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
-                    'bg-green-100 text-green-700'
-                  }`}>
-                    {task.status}
-                  </span>
-                </div>
-                {task.description && (
-                  <p className="text-xs text-gray-500 mt-1">{task.description}</p>
-                )}
-                {task.dueDate && (
-                  <p className="text-xs text-gray-500 mt-1">Due: {task.dueDate}</p>
-                )}
-              </div>
-              <button
-                onClick={() => handleDeleteTask(task.id)}
-                className="text-red-500 hover:text-red-600 ml-2"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Assign Task Modal */}
-      {isAssignTaskModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Assign Existing Task</h3>
-            <div className="max-h-96 overflow-y-auto">
-              {availableTasks.length > 0 ? (
-                <div className="space-y-2">
-                  {availableTasks.map(task => (
-                    <div
-                      key={task.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
-                      onClick={() => handleAssignTask(task.id)}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">{task.title}</span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            task.priority === 'High' ? 'bg-red-100 text-red-700' :
-                            task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                            {task.priority}
-                          </span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            task.status === 'TODO' ? 'bg-gray-100 text-gray-700' :
-                            task.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
-                            'bg-green-100 text-green-700'
-                          }`}>
-                            {task.status}
-                          </span>
-                        </div>
-                        {task.description && (
-                          <p className="text-xs text-gray-500 mt-1">{task.description}</p>
-                        )}
-                        {task.dueDate && (
-                          <p className="text-xs text-gray-500 mt-1">Due: {task.dueDate}</p>
-                        )}
-                      </div>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center p-4">
-                  <p className="text-gray-500">No available tasks to assign.</p>
-                </div>
-              )}
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setIsAssignTaskModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create Task Modal */}
-      {isTaskModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Task</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
-                <input
-                  type="text"
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Enter task title"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea
-                  value={newTaskDescription}
-                  onChange={(e) => setNewTaskDescription(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Enter task description"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Priority</label>
-                <select
-                  value={newTaskPriority}
-                  onChange={(e) => setNewTaskPriority(e.target.value as 'High' | 'Medium' | 'Low')}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Due Date</label>
-                <input
-                  type="date"
-                  value={newTaskDueDate}
-                  onChange={(e) => setNewTaskDueDate(e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setIsTaskModalOpen(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateTask}
-                className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
-              >
-                Create Task
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Asset Analysis */}
-      <FrameAssetAnalyzer frame={frame} />
     </div>
   );
 };

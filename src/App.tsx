@@ -71,7 +71,7 @@ const App: React.FC = () => {
             <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
             <Route path="/terms-of-service" element={<TermsOfServicePage />} />
             <Route path="/verify-email" element={<EmailVerificationPage />} />
-            <Route path="consultation" element={<ConsultationPage />} />
+            <Route path="/consultation" element={<ConsultationPage />} />
 
             {/* Protected Routes */}
             <Route
