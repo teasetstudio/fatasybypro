@@ -26,7 +26,7 @@ const Frame = ({
   const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage, notSavedFrameIds, flushDebouncedSaveFrame, getFrameRefData } = useFrames();
   const { showToast } = useToast();
   const canvasRef = useRef<CanvasDraw | null>(null);
-  const savedDataRef = useRef<string>(undefined);
+  const savedDataRef = useRef<string>(frame.canvasData);
   const imageRef = useRef<string | null>(null);
   const [localDescription, setLocalDescription] = useState(frame.description);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -382,7 +382,7 @@ const Frame = ({
           immediateLoading
           imgSrc={getImageSrc()}
           saveData={savedDataRef.current}
-          loadTimeOffset={100}
+          // loadTimeOffset={10}
           onChange={handleDrawEnd}
         />
       </div>
