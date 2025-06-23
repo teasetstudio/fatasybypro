@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 import { IFrame } from './types';
 import { useFrames } from '../context/FramesContext';
@@ -113,7 +113,7 @@ const Frame = ({
     if (canvasRef.current) {
       updateFrame(frame.id, { canvas: canvasRef.current });
     }
-  }, 50), [frame.id, updateFrame]);
+  }, 500), [frame.id, updateFrame]);
 
   const handleDrawEnd = () => {
     setIsDrawing(false);
@@ -183,9 +183,6 @@ const Frame = ({
     };
   }, [debouncedHandleDrawEnd]);
 
-  // const saveData = useMemo(() => {
-  //   return getFrameRefData(frame.id)?.canvasData;
-  // }, []); // Important to never update this, CanvasDraw will be failing when reading x (try to draw fast and with small delay)
 
   // Cleanup debounced function on unmount
   useEffect(() => {
