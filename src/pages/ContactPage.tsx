@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import Page from '../components/layouts/Page';
-import useScrollToTop from '../hooks/useScrollToTop';
 
 const ContactPage: React.FC = () => {
-  // useScrollToTop();
-
   const [formData, setFormData] = useState({
     name: '',
     email: '',

@@ -1,10 +1,7 @@
 import React from 'react';
 import Page from '../components/layouts/Page';
-import useScrollToTop from '../hooks/useScrollToTop';
 
 const TermsOfServicePage: React.FC = () => {
-  // useScrollToTop();
-  
   return (
     <Page title="Terms of Service">
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-12 px-4 sm:px-6 lg:px-8">

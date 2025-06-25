@@ -1,9 +1,7 @@
 import React from 'react';
 import Page from '../components/layouts/Page';
-import useScrollToTop from '../hooks/useScrollToTop';
 
 const AboutPage: React.FC = () => {
-  // useScrollToTop();
   return (
     <Page title="About">
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-10 px-4 sm:px-6 lg:px-8">

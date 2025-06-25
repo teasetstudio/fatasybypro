@@ -24,9 +24,9 @@ interface DrawingToolsProps {
   setBrushSize: (size: number) => void;
   onSmoothnessChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   onAspectRatioChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  onAddFrame: () => void;
+  onAddShot: () => void;
   showTooltip?: boolean;
-  showAddFrame?: boolean;
+  showAddShot?: boolean;
 }
 
 const DrawingTools: React.FC<DrawingToolsProps> = ({
@@ -38,9 +38,9 @@ const DrawingTools: React.FC<DrawingToolsProps> = ({
   setBrushSize,
   onSmoothnessChange,
   onAspectRatioChange,
-  onAddFrame,
+  onAddShot,
   showTooltip = true,
-  showAddFrame = true
+  showAddShot = true
 }) => {
   return (
     <div className="flex flex-wrap items-center gap-5">
@@ -114,9 +114,9 @@ const DrawingTools: React.FC<DrawingToolsProps> = ({
       </div>
       
       {/* Add Frame Button */}
-      {showAddFrame && (
+      {showAddShot && (
         <button 
-          onClick={onAddFrame}
+          onClick={onAddShot}
           className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-1 px-3 rounded-lg shadow transition duration-200 text-sm"
         >
           Add Frame

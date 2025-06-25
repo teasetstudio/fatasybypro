@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Task, TaskStatus, TaskPriority } from '../../types/task';
-import { useFrames } from '../../context/FramesContext';
+import { useStoryboard } from '../../context/StoryboardContext';
 import { useAssets } from '../../context/AssetContext';
 import { useTasks } from '../../context/TaskContext';
 
@@ -20,9 +20,9 @@ export default function TaskModal({
   initialTask,
 }: TaskModalProps) { 
   const modalRef = useRef<HTMLDivElement>(null);
-  const frameDropdownRef = useRef<HTMLDivElement>(null);
+  const shotDropdownRef = useRef<HTMLDivElement>(null);
   const taskDropdownRef = useRef<HTMLDivElement>(null);
-  const { frames } = useFrames();
+  const { shots } = useStoryboard();
   const { dependencies, addDependency, removeDependency } = useAssets();
   const { tasks } = useTasks();
   const [title, setTitle] = useState('');
@@ -31,11 +31,11 @@ export default function TaskModal({
   const [priority, setPriority] = useState<TaskPriority>('Medium');
   const [assignee, setAssignee] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [selectedFrames, setSelectedFrames] = useState<string[]>([]);
+  const [selectedShots, setSelectedShots] = useState<string[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
-  const [frameSearch, setFrameSearch] = useState('');
+  const [shotSearch, setShotSearch] = useState('');
   const [taskSearch, setTaskSearch] = useState('');
-  const [showFrameDropdown, setShowFrameDropdown] = useState(false);
+  const [showShotDropdown, setShowShotDropdown] = useState(false);
   const [showTaskDropdown, setShowTaskDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
@@ -55,15 +55,15 @@ export default function TaskModal({
   ] as const;
 
   // Memoize related frames and tasks calculations
-  const relatedFrames = useMemo(() => 
-    frames.filter(frame => 
+  const relatedShots = useMemo(() => 
+    shots.filter(shot => 
       dependencies.some(dep => 
         dep.sourceAssetId === initialTask?.id && 
-        dep.targetAssetId === frame.id && 
+        dep.targetAssetId === shot.id && 
         dep.relationshipType === 'task_in'
       )
     ),
-    [frames, dependencies, initialTask?.id]
+    [shots, dependencies, initialTask?.id]
   );
 
   const relatedTasks = useMemo(() => 
@@ -80,28 +80,28 @@ export default function TaskModal({
   // Initialize selected frames and tasks when editing an existing task
   useEffect(() => {
     if (initialTask) {
-      const frameIds = relatedFrames.map(frame => frame.id);
+      const shotIds = relatedShots.map(shot => shot.id);
       const taskIds = relatedTasks.map(task => task.id);
-      setSelectedFrames(frameIds);
+      setSelectedShots(shotIds);
       setSelectedTasks(taskIds);
     } else {
-      setSelectedFrames([]);
+      setSelectedShots([]);
       setSelectedTasks([]);
     }
-  }, [initialTask, relatedFrames, relatedTasks]);
+  }, [initialTask, relatedShots, relatedTasks]);
 
-  const handleFrameSelection = (frameId: string) => {
-    setSelectedFrames(prev => {
-      const newSelection = prev.includes(frameId)
-        ? prev.filter(id => id !== frameId)
-        : [...prev, frameId];
+  const handleShotSelection = (shotId: string) => {
+    setSelectedShots(prev => {
+      const newSelection = prev.includes(shotId)
+        ? prev.filter(id => id !== shotId)
+        : [...prev, shotId];
       
       // Only modify dependencies if we're editing an existing task
       if (initialTask) {
-        if (prev.includes(frameId)) {
-          removeDependency(initialTask.id, frameId);
+        if (prev.includes(shotId)) {
+          removeDependency(initialTask.id, shotId);
         } else {
-          addDependency(initialTask.id, frameId, 'task_in');
+          addDependency(initialTask.id, shotId, 'task_in');
         }
       }
       
@@ -154,9 +154,9 @@ export default function TaskModal({
     };
 
     const handleDropdownClickOutside = (event: MouseEvent) => {
-      // Handle frame dropdown
-      if (showFrameDropdown && frameDropdownRef.current && !frameDropdownRef.current.contains(event.target as Node)) {
-        setShowFrameDropdown(false);
+      // Handle shot dropdown
+      if (showShotDropdown && shotDropdownRef.current && !shotDropdownRef.current.contains(event.target as Node)) {
+        setShowShotDropdown(false);
       }
       // Handle task dropdown
       if (showTaskDropdown && taskDropdownRef.current && !taskDropdownRef.current.contains(event.target as Node)) {
@@ -181,15 +181,15 @@ export default function TaskModal({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('mousedown', handleDropdownClickOutside);
     };
-  }, [isOpen, onClose, showFrameDropdown, showTaskDropdown, showStatusDropdown, showPriorityDropdown]);
+  }, [isOpen, onClose, showShotDropdown, showTaskDropdown, showStatusDropdown, showPriorityDropdown]);
 
   // Filter frames based on search
-  const filteredFrames = useMemo(() => 
-    frames.filter(frame => 
-      frame.description?.toLowerCase().includes(frameSearch.toLowerCase()) ||
-      `Frame ${frames.indexOf(frame) + 1}`.toLowerCase().includes(frameSearch.toLowerCase())
+  const filteredShots = useMemo(() => 
+    shots.filter(shot => 
+      shot.description?.toLowerCase().includes(shotSearch.toLowerCase()) ||
+      `Shot ${shots.indexOf(shot) + 1}`.toLowerCase().includes(shotSearch.toLowerCase())
     ),
-    [frames, frameSearch]
+    [shots, shotSearch]
   );
 
   // Filter tasks based on search
@@ -215,7 +215,7 @@ export default function TaskModal({
     };
 
     if (!initialTask) {
-      (onSubmit as any)(newTask, selectedFrames, selectedTasks);
+      (onSubmit as any)(newTask, selectedShots, selectedTasks);
     }
     onClose();
   };
@@ -363,37 +363,37 @@ export default function TaskModal({
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Related Frames
             </label>
-            <div className="relative" ref={frameDropdownRef}>
+            <div className="relative" ref={shotDropdownRef}>
               <input
                 type="text"
-                value={frameSearch}
-                onChange={(e) => setFrameSearch(e.target.value)}
-                onFocus={() => setShowFrameDropdown(true)}
-                placeholder="Search frames..."
+                value={shotSearch}
+                onChange={(e) => setShotSearch(e.target.value)}
+                onFocus={() => setShowShotDropdown(true)}
+                placeholder="Search shots..."
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
-              {showFrameDropdown && (
+              {showShotDropdown && (
                 <div className="fixed z-[100] mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto" style={{ width: modalRef.current?.querySelector('.relative')?.getBoundingClientRect().width + 'px' }}>
-                  {filteredFrames.map((frame) => (
+                  {filteredShots.map((shot) => (
                     <div
-                      key={frame.id}
+                      key={shot.id}
                       className="flex items-center p-3 hover:bg-gray-50 cursor-pointer"
                       onClick={() => {
-                        handleFrameSelection(frame.id);
-                        setFrameSearch('');
-                        setShowFrameDropdown(false);
+                        handleShotSelection(shot.id);
+                        setShotSearch('');
+                        setShowShotDropdown(false);
                       }}
                     >
                       <input
                         type="checkbox"
-                        checked={selectedFrames.includes(frame.id)}
+                        checked={selectedShots.includes(shot.id)}
                         onChange={() => {}}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
                       <span className="ml-3 text-sm">
-                        Frame {frames.indexOf(frame) + 1}
-                        {frame.description && (
-                          <span className="text-gray-500 ml-2">- {frame.description}</span>
+                        Shot {shots.indexOf(shot) + 1}
+                        {shot.description && (
+                          <span className="text-gray-500 ml-2">- {shot.description}</span>
                         )}
                       </span>
                     </div>
@@ -401,19 +401,19 @@ export default function TaskModal({
                 </div>
               )}
             </div>
-            {selectedFrames.length > 0 && (
+            {selectedShots.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
-                {selectedFrames.map(frameId => {
-                  const frame = frames.find(f => f.id === frameId);
-                  return frame ? (
+                {selectedShots.map(shotId => {
+                  const shot = shots.find(s => s.id === shotId);
+                  return shot ? (
                     <span
-                      key={frameId}
+                      key={shotId}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-700"
                     >
-                      Frame {frames.indexOf(frame) + 1}
+                      Shot {shots.indexOf(shot) + 1}
                       <button
                         type="button"
-                        onClick={() => handleFrameSelection(frameId)}
+                        onClick={() => handleShotSelection(shotId)}
                         className="ml-2 text-blue-500 hover:text-blue-700"
                       >
                         ×

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api } from '../services/api';
 import AppPage from '../components/layouts/AppPage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useOrganization } from '../context/OrganizationContext';
@@ -252,7 +251,7 @@ const ProjectPage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate(`/dashboard/assets?projectId=${project.id}`)}
+                  onClick={() => navigate(`/dashboard/projects/${project.id}/assets`)}
                   className="group relative p-10 bg-gradient-to-br from-green-50 to-white rounded-2xl border border-green-100 hover:border-green-200 hover:shadow-lg transition-all duration-200 text-left h-full"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
@@ -270,7 +269,7 @@ const ProjectPage: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => navigate(`/dashboard/tasks?projectId=${project.id}`)}
+                  onClick={() => navigate(`/dashboard/projects/${project.id}/tasks`)}
                   className="group relative p-10 bg-gradient-to-br from-purple-50 to-white rounded-2xl border border-purple-100 hover:border-purple-200 hover:shadow-lg transition-all duration-200 text-left h-full"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>

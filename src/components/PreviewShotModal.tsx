@@ -1,19 +1,17 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import DrawingTools, { aspectRatios } from './DrawingTools';
-import { IFrame } from './types';
 import { getFileSizeError } from '../utils';
 import { useToast } from '../context/ToastContext';
+import { IShot } from '../types';
 
-interface PreviewFrameModalProps {
-  frame: IFrame | null;
+interface Props {
+  shot: IShot | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-  selectedFrameId: string | null;
-  frames: IFrame[];
-  modalFrameRef: React.RefObject<IFrame>;
+  modalShotRef: React.RefObject<IShot>;
   currentAspectRatio: typeof aspectRatios[0];
   brushColor: string;
   brushRadius: number;
@@ -22,18 +20,15 @@ interface PreviewFrameModalProps {
   handleBrushSizeChange: (size: number) => void;
   handleSmoothnessChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   handleAspectRatioChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
-  addFrame: () => void;
-  setFrames: React.Dispatch<React.SetStateAction<IFrame[]>>;
+  addShot: () => void;
 }
 
-const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
-  frame,
+const PreviewShotModal: React.FC<Props> = ({
+  shot,
   isOpen,
   onClose,
   onSave,
-  selectedFrameId,
-  frames,
-  modalFrameRef,
+  modalShotRef,
   currentAspectRatio,
   brushColor,
   brushRadius,
@@ -42,8 +37,7 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
   handleBrushSizeChange,
   handleSmoothnessChange,
   handleAspectRatioChange,
-  addFrame,
-  setFrames,
+  addShot,
 }) => {
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
   const toast = useToast();
@@ -61,8 +55,8 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
       }
 
       // Save current drawing state before changing background
-      if (modalFrameRef.current.canvas) {
-        modalFrameRef.current.canvasData = modalFrameRef.current.canvas.getSaveData();
+      if (modalShotRef.current.canvas) {
+        modalShotRef.current.canvasData = modalShotRef.current.canvas.getSaveData();
       }
       // set to false to force a re-render
       setIsBackgroundImage(false);
@@ -70,7 +64,7 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         const uploadedImage = e.target?.result as string;
-        modalFrameRef.current.image = uploadedImage;
+        modalShotRef.current.image = uploadedImage;
         // updateGlobalFramesData(id, { image: uploadedImage, canvas: canvasRef.current });
         setIsBackgroundImage(true);
       };
@@ -84,12 +78,12 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
 
   const removeBackgroundImage = () => {
     // Save current drawing state before removing background
-    if (modalFrameRef.current.canvas) {
-      modalFrameRef.current.canvasData = modalFrameRef.current.canvas.getSaveData();
+    if (modalShotRef.current.canvas) {
+      modalShotRef.current.canvasData = modalShotRef.current.canvas.getSaveData();
     }
 
     // Clear background image state
-    modalFrameRef.current.image = null;
+    modalShotRef.current.image = null;
     setIsBackgroundImage(false);
     setTimeout(() => {
       setIsBackgroundImage(true);
@@ -97,8 +91,8 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
   };
 
   const getImageSrc = () => {
-    if (modalFrameRef.current && modalFrameRef.current.image) {
-      return modalFrameRef.current.image;
+    if (modalShotRef.current && modalShotRef.current.image) {
+      return modalShotRef.current.image;
     }
     return undefined;
   };
@@ -135,8 +129,8 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
                   className="text-lg font-medium leading-6 text-gray-900 mb-4"
                 >
                   Frame Preview (Editable)
-                  {frame && frame.description && 
-                    `: ${frame.description}`
+                  {shot && shot.description && 
+                    `: ${shot.description}`
                   }
                 </DialogTitle>
 
@@ -151,17 +145,17 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
                     setBrushSize={handleBrushSizeChange}
                     onSmoothnessChange={handleSmoothnessChange}
                     onAspectRatioChange={handleAspectRatioChange}
-                    onAddFrame={addFrame}
+                    onAddShot={addShot}
                     showTooltip={false}
-                    showAddFrame={false}
+                    showAddShot={false}
                   />
 
                   {/* Canvas controls */}
                   <div className="flex items-center space-x-2 ml-auto">
                     <button
                       onClick={() => {
-                        if (modalFrameRef.current && modalFrameRef.current.canvas) {
-                          modalFrameRef.current.canvas.undo();
+                        if (modalShotRef.current && modalShotRef.current.canvas) {
+                          modalShotRef.current.canvas.undo();
                         }
                       }}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-sm"
@@ -173,8 +167,8 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
                     </button>
                     <button
                       onClick={() => {
-                        if (modalFrameRef.current && modalFrameRef.current.canvas) {
-                          modalFrameRef.current.canvas.clear();
+                        if (modalShotRef.current && modalShotRef.current.canvas) {
+                          modalShotRef.current.canvas.clear();
                         }
                       }}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-sm"
@@ -205,7 +199,7 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                       </div>
                     </label>
-                    {frame?.image && (
+                    {shot?.image && (
                       <button
                         onClick={removeBackgroundImage}
                         className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm inline-flex items-center"
@@ -222,10 +216,10 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
                 <div className="mt-2 flex justify-center">
                   <div className="border border-gray-200 rounded">
                     <CanvasDraw
-                      key={`modal-canvas-${frame?.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
+                      key={`modal-canvas-${shot?.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
                       ref={(canvasDraw: CanvasDraw | null) => {
-                        if (modalFrameRef && modalFrameRef.current) {
-                          modalFrameRef.current.canvas = canvasDraw;
+                        if (modalShotRef && modalShotRef.current) {
+                          modalShotRef.current.canvas = canvasDraw;
                         }
                       }}
                       canvasWidth={currentAspectRatio.width * 2}
@@ -238,7 +232,7 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
                       enablePanAndZoom={false}
                       immediateLoading={true}
                       imgSrc={getImageSrc()}
-                      saveData={modalFrameRef.current?.canvasData}
+                      saveData={modalShotRef.current?.canvasData}
                       className="rounded"
                     />
                   </div>
@@ -269,4 +263,4 @@ const PreviewFrameModal: React.FC<PreviewFrameModalProps> = ({
   );
 };
 
-export default PreviewFrameModal; 
+export default PreviewShotModal;

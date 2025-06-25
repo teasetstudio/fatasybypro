@@ -1,13 +1,13 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import CanvasDraw from 'react-canvas-draw';
-import { IFrame } from './types';
-import { useFrames } from '../context/FramesContext';
+import { IShot } from '../types';
+import { useStoryboard } from '../context/StoryboardContext';
 import { useToast } from '../context/ToastContext';
 import ConfirmationModal from './ConfirmationModal';
 import debounce from 'lodash.debounce';
 
-interface FrameProps {
-  frame: IFrame;
+interface Props {
+  shot: IShot;
   index: number;
   brushColor: string;
   brushRadius: number;
@@ -15,20 +15,20 @@ interface FrameProps {
   onPreview: (id: string) => void;
 }
 
-const Frame = ({
-  frame,
+const Shot = ({
+  shot,
   index,
   brushColor,
   brushRadius,
   brushSmoothness,
   onPreview,
-}: FrameProps) => {
-  const { currentAspectRatio, updateFrame, deleteFrame, uploadImage, deleteImage, notSavedFrameIds, flushDebouncedSaveFrame, getFrameRefData } = useFrames();
+}: Props) => {
+  const { statuses, updateShotStatus, currentAspectRatio, updateShot, deleteShot, uploadImage, deleteImage, notSavedShotIds, flushDebouncedSaveShot, getShotRefData } = useStoryboard();
   const { showToast } = useToast();
   const canvasRef = useRef<CanvasDraw | null>(null);
-  const savedDataRef = useRef<string>(frame.canvasData);
+  const savedDataRef = useRef<string>(shot.canvasData);
   const imageRef = useRef<string | null>(null);
-  const [localDescription, setLocalDescription] = useState(frame.description);
+  const [localDescription, setLocalDescription] = useState(shot.description);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const [isBackgroundImage, setIsBackgroundImage] = useState(false);
@@ -36,12 +36,14 @@ const Frame = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleClear = () => {
     if (canvasRef.current) {
       canvasRef.current.clear();
       imageRef.current = null;
-      updateFrame(frame.id, { image: null, canvas: canvasRef.current });
+      updateShot(shot.id, { image: null, canvas: canvasRef.current });
       setIsBackgroundImage(false);
     }
   };
@@ -49,13 +51,13 @@ const Frame = ({
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newDescription = e.target.value;
     setLocalDescription(newDescription);
-    updateFrame(frame.id, { description: newDescription });
+    updateShot(shot.id, { description: newDescription });
   };
 
   const handleUndo = () => {
     if (canvasRef.current) {
       canvasRef.current.undo();
-      updateFrame(frame.id, { canvas: canvasRef.current });
+      updateShot(shot.id, { canvas: canvasRef.current });
     }
   };
 
@@ -70,7 +72,7 @@ const Frame = ({
         const imageUrl = await uploadImage(file);
         
         imageRef.current = imageUrl;
-        updateFrame(frame.id, { image: imageUrl, canvas: canvasRef.current });
+        updateShot(shot.id, { image: imageUrl, canvas: canvasRef.current });
         setIsBackgroundImage(true);
       } catch (error: any) {
         // Show user-friendly error message
@@ -92,14 +94,14 @@ const Frame = ({
     setIsDeletingImage(true);
     try {
       // If there's an image URL, delete it from the server
-      if (frame.image) {
-        await deleteImage(frame.image);
+      if (shot.image) {
+        await deleteImage(shot.image);
       }
       
       // Clear background image state
       imageRef.current = null;
       setIsBackgroundImage(false);
-      updateFrame(frame.id, { image: null, canvas: canvasRef.current });
+      updateShot(shot.id, { image: null, canvas: canvasRef.current });
     } finally {
       setIsDeletingImage(false);
     }
@@ -111,13 +113,36 @@ const Frame = ({
 
   const debouncedHandleDrawEnd = useCallback(debounce(() => {
     if (canvasRef.current) {
-      updateFrame(frame.id, { canvas: canvasRef.current });
+      updateShot(shot.id, { canvas: canvasRef.current });
     }
-  }, 500), [frame.id, updateFrame]);
+  }, 500), [shot.id, updateShot]);
 
   const handleDrawEnd = () => {
     setIsDrawing(false);
     debouncedHandleDrawEnd()
+  };
+
+  const handleStatusSelect = async (statusId: string | null) => {
+    try {
+      await updateShotStatus(shot.id, statusId);
+      setIsStatusDropdownOpen(false);
+    } catch (error) {
+      console.error('Error updating shot status:', error);
+    }
+  };
+
+  const getDropdownPosition = () => {
+    if (!statusDropdownRef.current) return 'bottom';
+    
+    const rect = statusDropdownRef.current.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const dropdownHeight = 200; // Approximate height of dropdown
+    
+    // Check if there's enough space below
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    
+    return spaceBelow >= dropdownHeight || spaceBelow > spaceAbove ? 'bottom' : 'top';
   };
 
   const downloadDrawing = () => {
@@ -166,15 +191,15 @@ const Frame = ({
   };
 
   useEffect(() => {
-    if (imageRef.current !== frame.image) {
-      imageRef.current = frame.image;
-      // When frame's canvasData changes, load it into the canvas
+    if (imageRef.current !== shot.image) {
+      imageRef.current = shot.image;
+      // When shot's canvasData changes, load it into the canvas
       setIsBackgroundImage(false)
       setTimeout(() => {
         setIsBackgroundImage(true)
       }, 10)
     }
-  }, [frame.image]);
+  }, [shot.image]);
 
   // Cleanup debounced function on unmount
   useEffect(() => {
@@ -183,11 +208,27 @@ const Frame = ({
     };
   }, [debouncedHandleDrawEnd]);
 
+  // Close status dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.status-dropdown-container')) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
 
-  // Cleanup debounced function on unmount
+    if (isStatusDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isStatusDropdownOpen]);
+
   useEffect(() => {
     if (canvasRef.current) {
-      const savedData = getFrameRefData(frame.id)?.canvasData;
+      const savedData = getShotRefData(shot.id)?.canvasData;
       if (savedData) {
         savedDataRef.current = savedData;
         canvasRef.current.loadSaveData(savedData);
@@ -199,24 +240,24 @@ const Frame = ({
     <div 
       className={`flex flex-col bg-white rounded-lg shadow-md p-4 relative ${currentAspectRatio.cardWidth} mb-6`}
     >
-      {/* Frame number and unsaved indicator container */}
+      {/* Shot number and unsaved indicator container */}
       <div className="absolute -top-3 -left-3 flex items-center gap-1 z-10">
         <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md">
           {index + 1}
         </div>
-        {notSavedFrameIds.has(frame.id) && (
+        {notSavedShotIds.has(shot.id) && (
           <div className="relative">
             <button 
-              onClick={() => flushDebouncedSaveFrame(frame.id)}
-              disabled={notSavedFrameIds.get(frame.id) === 'saving'}
+              onClick={() => flushDebouncedSaveShot(shot.id)}
+              disabled={notSavedShotIds.get(shot.id) === 'saving'}
               className={`w-6 h-6 rounded-full text-white flex items-center justify-center shadow-md transition-colors group/indicator ${
-                notSavedFrameIds.get(frame.id) === 'saving'
+                notSavedShotIds.get(shot.id) === 'saving'
                   ? 'bg-yellow-400 cursor-not-allowed'
                   : 'bg-yellow-500 hover:bg-yellow-600 cursor-pointer'
               }`}
-              title={notSavedFrameIds.get(frame.id) === 'saving' ? 'Saving changes...' : 'Click to save changes'}
+              title={notSavedShotIds.get(shot.id) === 'saving' ? 'Saving changes...' : 'Click to save changes'}
             >
-              {notSavedFrameIds.get(frame.id) === 'saving' ? (
+              {notSavedShotIds.get(shot.id) === 'saving' ? (
                 <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -229,7 +270,7 @@ const Frame = ({
               {/* Tooltip */}
               <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/indicator:opacity-100 group-hover/indicator:visible transition-all duration-200 z-50">
                 <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  {notSavedFrameIds.get(frame.id) === 'saving' 
+                  {notSavedShotIds.get(shot.id) === 'saving' 
                     ? 'Saving changes...' 
                     : 'Unsaved changes. Wait 1 min or click here to save changes'}
                 </div>
@@ -239,6 +280,61 @@ const Frame = ({
             </button>
           </div>
         )}
+        <div className='w-6 h-6 rounded-full relative group/status shadow-sm border border-gray-200 cursor-pointer status-dropdown-container' 
+             onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+             ref={statusDropdownRef}>
+          <div 
+            className="w-full h-full rounded-full border-2 border-white"
+            style={{ backgroundColor: shot.status?.color || '#6B7280' }}
+          />
+          {/* Status Dropdown */}
+          {isStatusDropdownOpen && (
+            <div className={`absolute left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-32 status-dropdown-container ${
+              getDropdownPosition() === 'bottom' 
+                ? 'top-full mt-2' 
+                : 'bottom-full mb-2'
+            }`}>
+              <div className="py-1">
+                {/* No status option */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStatusSelect(null);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                  <span>No status</span>
+                </button>
+                {/* Available statuses */}
+                {statuses.map((status) => (
+                  <button
+                    key={status.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusSelect(status.id);
+                    }}
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                  >
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: status.color }}
+                    ></div>
+                    <span>{status.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Tooltip */}
+          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/status:opacity-100 group-hover/status:visible transition-all duration-200 z-50">
+            <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+              {shot.status?.name || 'No status'} (Click to change)
+            </div>
+            {/* Tooltip arrow */}
+            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+          </div>
+        </div>
       </div>
 
       {/* Canvas controls */}
@@ -247,9 +343,9 @@ const Frame = ({
 
         <div className="mb-3 flex justify-end space-x-2">
           <button
-            onClick={() => onPreview(frame.id)}
+            onClick={() => onPreview(shot.id)}
             className="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-sm flex items-center"
-            aria-label="Preview frame"
+            aria-label="Preview shot"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -331,7 +427,7 @@ const Frame = ({
           <button
             onClick={() => setIsDeleteModalOpen(true)}
             className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm inline-flex items-center"
-            aria-label="Delete frame"
+            aria-label="Delete shot"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -343,14 +439,14 @@ const Frame = ({
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
-        title="Delete Frame"
-        message="Are you sure you want to delete this frame? This action cannot be undone."
+        title="Delete shot"
+        message="Are you sure you want to delete this shot? This action cannot be undone."
         confirmText="Delete"
         cancelText="Cancel"
         onConfirm={async () => {
           setIsDeleting(true);
           try {
-            await deleteFrame(frame.id);
+            await deleteShot(shot.id);
             setIsDeleteModalOpen(false);
           } finally {
             setIsDeleting(false);
@@ -369,7 +465,7 @@ const Frame = ({
         // onMouseLeave={handleDrawEnd}
       >
         <CanvasDraw 
-          key={`canvas-${frame.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
+          key={`canvas-${shot.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
           ref={canvasRef}
           className="rounded"
           brushColor={brushColor}
@@ -398,4 +494,4 @@ const Frame = ({
   );
 };
 
-export default Frame;
+export default Shot;

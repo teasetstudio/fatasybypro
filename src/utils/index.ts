@@ -1,3 +1,5 @@
+export * from './shotUtils';
+
 /**
  * Format file size in bytes to human readable format
  * @param bytes - File size in bytes
@@ -64,8 +66,8 @@ export const TOAST_MESSAGES = {
   FILE_TYPE_ERROR: 'Only image files are allowed',
   NETWORK_ERROR: 'Network error. Please check your connection and try again.',
   CLOUDINARY_ERROR: 'File size too large for free account. Please compress your image or upgrade your plan.',
-  FRAME_CREATED: 'Frame created successfully',
-  FRAME_DELETED: 'Frame deleted successfully',
+  SHOT_CREATED: 'Shot created successfully',
+  SHOT_DELETED: 'Shot deleted successfully',
   IMAGE_UPLOADED: 'Image uploaded successfully',
   IMAGE_DELETED: 'Image deleted successfully',
 } as const; 

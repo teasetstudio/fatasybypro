@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import Frame from './Frame';
-import { IFrame } from './types';
+import Shot from './Shot';
+import { IShot } from '../types';
 
-interface DraggableFrameProps {
-  frame: IFrame;
+interface Props {
+  shot: IShot;
   index: number;
   brushColor: string;
   brushRadius: number;
@@ -13,16 +13,16 @@ interface DraggableFrameProps {
   isDisabled?: boolean
 }
 
-const DraggableFrame = (props: DraggableFrameProps) => {
+const ShotDraggable = (props: Props) => {
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
 
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
-    id: props.frame.id,
+    id: props.shot.id,
     disabled: props.isDisabled,
   });
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: props.frame.id,
+    id: props.shot.id,
   });
 
   const style = transform ? {
@@ -73,9 +73,9 @@ const DraggableFrame = (props: DraggableFrameProps) => {
           </svg>
         </div>
 
-        {/* Frame Component */}
+        {/* Shot Component */}
         <div className={`transition-opacity duration-200 ${isDragging ? 'opacity-50' : 'opacity-100'}`}>
-          <Frame {...props} />
+          <Shot {...props} />
         </div>
 
         {/* Placeholder */}
@@ -92,4 +92,4 @@ const DraggableFrame = (props: DraggableFrameProps) => {
   );
 };
 
-export default DraggableFrame;
+export default ShotDraggable;

@@ -1,27 +1,30 @@
-import { useFrames } from '../context/FramesContext';
-import { Link } from 'react-router-dom';
+import { useStoryboard } from '../context/StoryboardContext';
+import { Link, useParams } from 'react-router-dom';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 
-
-import { createEmptyCanvasData, safelyGetCanvasData, safelyLoadCanvasData } from '../components/frameUtils';
+import { createEmptyCanvasData, safelyGetCanvasData, safelyLoadCanvasData } from '../utils';
 import DrawingTools, { smoothnessOptions, aspectRatios } from '../components/DrawingTools';
-import PreviewFrameModal from '../components/PreviewFrameModal';
-import { IFrame } from '../components/types';
-import DraggableFrame from '../components/DraggableFrame';
+import PreviewShotModal from '../components/PreviewShotModal';
+import { IShot } from '../types';
+import ShotDraggable from '../components/ShotDraggable';
 import AppPage from '../components/layouts/AppPage';
 
 const StoryboardPage = () => {
+  const { id: projectId } = useParams<{ id: string }>();
+
   const {
-    frames,
-    framesDataRef,
-    addFrame,
-    setFrames,
+    shots,
+    shotsDataRef,
+    getStoryboard,
+    addShot,
+    setShots,
     currentAspectRatio,
     setCurrentAspectRatio,
-  } = useFrames();
+    changeShotOrder,
+  } = useStoryboard();
 
-  const modalFrameRef = useRef<IFrame>({
+  const modalShotRef = useRef<IShot>({
     id: '',
     description: '',
     image: null,
@@ -32,32 +35,32 @@ const StoryboardPage = () => {
 
   const [brushColor, setBrushColor] = useState("#000000");
   const [brushRadius, setBrushRadius] = useState(2);
-  const [brushSmoothness, setBrushSmoothness] = useState(smoothnessOptions[1].value); // Default to medium smoothness
+  const [brushSmoothness, setBrushSmoothness] = useState(smoothnessOptions[1].value);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedFrame, setSelectedFrame] = useState<IFrame | null>(null);
-  const [selectedFrameId, setSelectedFrameId] = useState<string | null>(null);
+  const [selectedShot, setSelectedShot] = useState<IShot | null>(null);
+  const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
 
   // Add state to track modal canvas changes
   const [modalCanvasChanged, setModalCanvasChanged] = useState(false);
   const [currentModalCanvasData, setCurrentModalCanvasData] = useState<string | null>(null);
 
+  const [isAddingShot, setIsAddingShot] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Add a function to handle drawing tool changes that preserves modal canvas state
   const handleDrawingToolChange = (action: () => void) => {
-    // If modal is open, save current canvas state first
-    if (isModalOpen && modalFrameRef.current && modalFrameRef.current.canvas) {
+    if (isModalOpen && modalShotRef.current && modalShotRef.current.canvas) {
       try {
-        const currentData = modalFrameRef.current.canvas.getSaveData();
-
+        const currentData = modalShotRef.current.canvas.getSaveData();
         setCurrentModalCanvasData(currentData);
         setModalCanvasChanged(true);
       } catch (error) {
         console.error("Error saving modal canvas state:", error);
       }
     }
-
-    // Then perform the action (color change, brush size change, etc.)
     action();
   };
 
@@ -77,157 +80,127 @@ const StoryboardPage = () => {
   const handleAspectRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedRatio = aspectRatios.find(ratio => ratio.name === e.target.value);
     if (selectedRatio) {
-      // Save current canvas data before changing aspect ratio
-      const updatedFrames = frames.map(frame => {
-
-        const canvas = framesDataRef.current.find(f => f.id === frame.id)?.canvas || null;
+      const updatedShots = shots.map(shot => {
+        const canvas = shotsDataRef.current.find(s => s.id === shot.id)?.canvas || null;
         const canvasData = safelyGetCanvasData(canvas, selectedRatio.width, selectedRatio.height);
-
         return {
-          ...frame,
+          ...shot,
           canvasData,
         };
       });
 
-      setFrames(updatedFrames);
+      setShots(updatedShots);
       setCurrentAspectRatio(selectedRatio);
 
-      // Need to give time for state to update before reloading canvas data
       setTimeout(() => {
-        updatedFrames.forEach(frame => {
-          const canvas = framesDataRef.current.find(f => f.id === frame.id)?.canvas || null;
-
-          if (canvas && frame.canvasData) {
-            safelyLoadCanvasData(canvas, frame.canvasData, selectedRatio.width, selectedRatio.height, true);
+        updatedShots.forEach(shot => {
+          const canvas = shotsDataRef.current.find(s => s.id === shot.id)?.canvas || null;
+          if (canvas && shot.canvasData) {
+            safelyLoadCanvasData(canvas, shot.canvasData, selectedRatio.width, selectedRatio.height, true);
           }
         });
       }, 100);
     }
   };
 
-  const openPreviewModal = (frameId: string) => {
-    // Find the frame in the frames array
-    const frame = frames.find(f => f.id === frameId);
-    if (!frame) {
-      console.error(`Frame with ID ${frameId} not found`);
+  const openPreviewModal = (shotId: string) => {
+    const shot = shots.find(s => s.id === shotId);
+    if (!shot) {
+      console.error(`Shot with ID ${shotId} not found`);
       return;
     }
 
-    const frameData = framesDataRef.current.find(f => f.id === frameId);
-    const canvas = frameData?.canvas || null;
+    const shotData = shotsDataRef.current.find(s => s.id === shotId);
+    const canvas = shotData?.canvas || null;
 
-    if (frameData && canvas) {
+    if (shotData && canvas) {
       try {
-        // Get the save data and ensure it's valid
         const canvasData = safelyGetCanvasData(canvas, currentAspectRatio.width * 2, currentAspectRatio.height * 2);
-        // modalCanvasRef.current = canvas;
-        modalFrameRef.current.canvas = canvas;
-        modalFrameRef.current.canvasData = canvasData;
-        modalFrameRef.current.image = frameData.image;
-        // Store the frame ID to ensure consistency
-        setSelectedFrame(frame);
-        setSelectedFrameId(frameId);
+        modalShotRef.current.canvas = canvas;
+        modalShotRef.current.canvasData = canvasData;
+        modalShotRef.current.image = shotData.image;
+        setSelectedShot(shot);
+        setSelectedShotId(shotId);
         setIsModalOpen(true);
       } catch (error) {
-        console.error(`Error preparing canvas data for modal for frame ${frameId}:`, error);
+        console.error(`Error preparing canvas data for modal for shot ${shotId}:`, error);
         alert("There was an error opening the preview. Please try again.");
       }
     }
   };
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setIsModalOpen(false);
-    setSelectedFrameId(null);
-    // modalFrameRef.current.canvasData = undefined;
+    setSelectedShotId(null);
     setModalCanvasChanged(false);
     setCurrentModalCanvasData(null);
-  };
+  }, []);
 
-  // Add a function to save changes from modal to the main canvas
   const saveModalChanges = () => {
-    if (selectedFrame && modalFrameRef.current && modalFrameRef.current.canvas) {
+    if (selectedShot && modalShotRef.current && modalShotRef.current.canvas) {
       try {
-        // Get the save data from the modal canvas
-        const saveData = modalFrameRef.current.canvas.getSaveData();
+        const saveData = modalShotRef.current.canvas.getSaveData();
+        const shotToUpdate = shotsDataRef.current.find(s => s.id === selectedShot.id);
 
-        // Find the frame to update in both arrays
-        const frameToUpdate = framesDataRef.current.find(f => f.id === selectedFrame.id);
-
-        if (!frameToUpdate) {
-          console.error(`Could not find frame with ID ${selectedFrame.id} in framesDataRef`);
+        if (!shotToUpdate) {
+          console.error(`Could not find shot with ID ${selectedShot.id} in shotsDataRef`);
           return;
         }
 
-        // If the frame has a canvas property, update it with the new canvas data
-        if (frameToUpdate.canvas) {
-          safelyLoadCanvasData(frameToUpdate.canvas, saveData, currentAspectRatio.width, currentAspectRatio.height, true);
+        if (shotToUpdate.canvas) {
+          safelyLoadCanvasData(shotToUpdate.canvas, saveData, currentAspectRatio.width, currentAspectRatio.height, true);
         }
 
-        // Update the framesDataRef
-        framesDataRef.current = framesDataRef.current.map(f => 
-          f.id === selectedFrame.id 
-            ? { ...f, canvasData: saveData, image: modalFrameRef.current.image } 
-            : f
+        shotsDataRef.current = shotsDataRef.current.map(s => 
+          s.id === selectedShot.id 
+            ? { ...s, canvasData: saveData, image: modalShotRef.current.image } 
+            : s
         );
 
-        // Update the frames state immediately (don't use debounce here)
-        setFrames(
-          frames.map(frame => 
-            frame.id === selectedFrame.id 
-              ? { ...frame, canvasData: saveData, image: modalFrameRef.current.image           } 
-              : frame
+        setShots(
+          shots.map(shot => 
+            shot.id === selectedShot.id 
+              ? { ...shot, canvasData: saveData, image: modalShotRef.current.image } 
+              : shot
           )
         );
 
-        console.log(`Successfully saved changes for frame ${selectedFrame.id}`);
-        
-        // Close the modal
+        console.log(`Successfully saved changes for shot ${selectedShot.id}`);
         closeModal();
       } catch (error) {
         console.error("Error saving canvas data:", error);
-        console.error(error);
         alert("Failed to save changes. Please try again.");
       }
-    } else {
-      console.error("Cannot save changes: missing data");
-      if (!selectedFrameId) console.error("selectedFrameId is null");
-      if (!modalFrameRef.current) console.error("modalFrameRef.current is null");
-      if (modalFrameRef.current && !modalFrameRef.current.canvas) console.error("modalFrameRef.current.canvas is null");
     }
   };
 
-  // Effect to load canvas data into modal when it opens
   useEffect(() => {
-    if (isModalOpen && modalFrameRef.current && modalFrameRef.current.canvas && selectedFrameId !== null) {
+    if (isModalOpen && modalShotRef.current && modalShotRef.current.canvas && selectedShotId !== null) {
       try {
-        // Get the frame ID to ensure we're working with the correct frame
-        const frameId = selectedFrameId;
+        const shotId = selectedShotId;
 
-        if (!frameId) {
-          console.error("Invalid frame index or frame ID not found");
+        if (!shotId) {
+          console.error("Invalid shot index or shot ID not found");
           closeModal();
           return;
         }
 
-        // Add a small delay to ensure the canvas is fully rendered
         setTimeout(() => {
-          if (modalFrameRef.current && modalFrameRef.current.canvas) {
-            // If we have changed the canvas in the modal and are just updating tools, use that data
+          if (modalShotRef.current && modalShotRef.current.canvas) {
             if (modalCanvasChanged && currentModalCanvasData) {
               console.log(`Loading preserved modal canvas data after tool change`);
-              safelyLoadCanvasData(modalFrameRef.current.canvas, currentModalCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
+              safelyLoadCanvasData(modalShotRef.current.canvas, currentModalCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
               return;
             }
 
-            // Otherwise load from the original data
-            if (!modalFrameRef.current.canvasData) {
-              console.log(`No modal canvas data available for frame ${frameId}, using empty canvas`);
+            if (!modalShotRef.current.canvasData) {
+              console.log(`No modal canvas data available for shot ${shotId}, using empty canvas`);
               const emptyCanvasData = createEmptyCanvasData(currentAspectRatio.width * 2, currentAspectRatio.height * 2);
-              safelyLoadCanvasData(modalFrameRef.current.canvas, emptyCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
+              safelyLoadCanvasData(modalShotRef.current.canvas, emptyCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
               return;
             }
-            safelyLoadCanvasData(modalFrameRef.current.canvas, modalFrameRef.current.canvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
-            console.log(`Successfully loaded canvas data into modal for frame ${frameId}`);
+            safelyLoadCanvasData(modalShotRef.current.canvas, modalShotRef.current.canvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
+            console.log(`Successfully loaded canvas data into modal for shot ${shotId}`);
           }
         }, 100);
       } catch (error) {
@@ -236,56 +209,90 @@ const StoryboardPage = () => {
       }
     }
   }, [
-    isModalOpen, 
-    currentAspectRatio, 
-    selectedFrameId, 
-    frames, 
-    closeModal, 
-    modalCanvasChanged, 
+    isModalOpen,
+    currentAspectRatio,
+    selectedShotId,
+    shots,
+    closeModal,
+    modalCanvasChanged,
     currentModalCanvasData
   ]);
 
-  // Callback for handling description changes
-  const handleDescriptionChange = useCallback((index: number, description: string) => {
-    setFrames(frames => frames.map((f, i) =>
-      i === index ? { ...f, description } : f
-    ));
-  }, []);
-
-  // Add drag and drop handlers
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (over && active.id !== over.id) {
-      const oldIndex = frames.findIndex((frame) => frame.id === active.id);
-      const newIndex = frames.findIndex((frame) => frame.id === over.id);
-      
-      const newFrames = [...frames];
-      const [movedFrame] = newFrames.splice(oldIndex, 1);
-      newFrames.splice(newIndex, 0, movedFrame);
-      
-      setFrames(newFrames);
-      framesDataRef.current = newFrames;
+    if (!over || active.id === over.id || isReordering) return;
+
+    const draggedShot = shots.find((shot) => shot.id === active.id);
+    const targetShot = shots.find((shot) => shot.id === over.id);
+
+    if (!draggedShot || !targetShot) return;
+
+    // Update local state immediately for instant UI feedback
+    const oldIndex = shots.findIndex((shot) => shot.id === active.id);
+    const newIndex = shots.findIndex((shot) => shot.id === over.id);
+    
+    const newShots = [...shots];
+    const [movedShot] = newShots.splice(oldIndex, 1);
+    newShots.splice(newIndex, 0, movedShot);
+    
+    setShots(newShots);
+    shotsDataRef.current = newShots;
+
+    // Then update the backend
+    try {
+      setIsReordering(true);
+      await changeShotOrder(draggedShot.id, targetShot.order);
+    } catch (error) {
+      console.error('Error reordering shot:', error);
+      // Revert the local state if the API call fails
+      setShots(shots);
+      shotsDataRef.current = shots;
+    } finally {
+      setIsReordering(false);
     }
   };
 
+  useEffect(() => {
+    if (projectId) {
+      setIsLoading(true);
+      getStoryboard(projectId)
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [projectId, getStoryboard]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <svg className="animate-spin h-12 w-12 text-blue-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <p className="text-gray-600 font-medium">Loading frames...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <AppPage title="Storyboard">
+    <AppPage title={`Project Storyboard - ${projectId}`}>
       <div className="min-h-screen bg-gray-100">
         {/* Compact Header with Title and Drawing Tools */}
         <div className="bg-white shadow-md w-full sticky top-0 z-20">
           <div className="container mx-auto px-4 py-3">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              {/* Title */}
+              {/* Title and Navigation */}
               <div className="flex items-center space-x-4">
-                <Link to="/menu" className="text-gray-600 hover:text-gray-800">
+                <Link to={`/dashboard/projects/${projectId}`} className="text-gray-600 hover:text-gray-800">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                   </svg>
                 </Link>
-                <h1 className="text-2xl font-bold text-gray-800 mb-3 md:mb-0">Storyboard Creator</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-3 md:mb-0">Project Storyboard</h1>
               </div>
-              
 
               {/* Drawing Tools */}
               <DrawingTools
@@ -297,7 +304,7 @@ const StoryboardPage = () => {
                 setBrushSize={handleBrushSizeChange}
                 onSmoothnessChange={handleSmoothnessChange}
                 onAspectRatioChange={handleAspectRatioChange}
-                onAddFrame={addFrame}
+                onAddShot={addShot}
               />
             </div>
           </div>
@@ -307,29 +314,49 @@ const StoryboardPage = () => {
         <div className="container-full mx-auto p-4 mt-4">
           <div className="overflow-visible pb-4">
             <DndContext onDragEnd={handleDragEnd}>
-              <div className="flex flex-wrap gap-6 justify-center p-4">
-                {frames.map((frame, index) => (
-                  <DraggableFrame
-                    key={frame.id}
-                    frame={frame}
-                    index={index}
-                    brushColor={brushColor}
-                    brushRadius={brushRadius}
-                    brushSmoothness={brushSmoothness}
-                    onPreview={openPreviewModal}
-                  />
-                ))}
-                {/* Always show Add Frame button in the flex container */}
-                <div className="flex items-center justify-center mb-6">
-                  <button
-                    onClick={addFrame}
-                    className={`flex flex-col items-center justify-center bg-white bg-opacity-70 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition duration-200 ${currentAspectRatio.cardWidth} h-64`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                    <span className="text-blue-600 font-medium">Add Frame</span>
-                  </button>
+              <div className={`relative ${isReordering ? 'pointer-events-none' : ''}`}>
+                <div className="flex flex-wrap gap-6 justify-center p-4">
+                  {shots.map((shot, index) => (
+                    <ShotDraggable
+                      key={shot.id}
+                      shot={shot}
+                      index={index}
+                      brushColor={brushColor}
+                      brushRadius={brushRadius}
+                      brushSmoothness={brushSmoothness}
+                      onPreview={openPreviewModal}
+                      isDisabled={isReordering}
+                    />
+                  ))}
+                  {/* Add Shot button */}
+                  <div className="flex items-center justify-center mb-6">
+                    <button
+                      onClick={async () => {
+                        setIsAddingShot(true);
+                        await addShot();
+                        setIsAddingShot(false)
+                      }}
+                      disabled={isAddingShot}
+                      className={`flex flex-col items-center justify-center bg-white bg-opacity-70 border-2 border-dashed border-blue-300 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition duration-200 ${currentAspectRatio.cardWidth} h-64 ${isAddingShot ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {isAddingShot ? (
+                        <>
+                          <svg className="animate-spin h-12 w-12 text-blue-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          <span className="text-blue-600 font-medium">Adding Frame...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-blue-500 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          <span className="text-blue-600 font-medium">Add Frame</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </DndContext>
@@ -337,14 +364,12 @@ const StoryboardPage = () => {
         </div>
 
         {/* Preview Modal */}
-        <PreviewFrameModal
-          frame={selectedFrame}
+        <PreviewShotModal
+          shot={selectedShot}
           isOpen={isModalOpen}
           onClose={closeModal}
           onSave={saveModalChanges}
-          selectedFrameId={selectedFrameId}
-          frames={frames}
-          modalFrameRef={modalFrameRef}
+          modalShotRef={modalShotRef}
           currentAspectRatio={currentAspectRatio}
           brushColor={brushColor}
           brushRadius={brushRadius}
@@ -353,12 +378,11 @@ const StoryboardPage = () => {
           handleBrushSizeChange={handleBrushSizeChange}
           handleSmoothnessChange={handleSmoothnessChange}
           handleAspectRatioChange={handleAspectRatioChange}
-          addFrame={addFrame}
-          setFrames={setFrames}
+          addShot={addShot}
         />
       </div>
     </AppPage>
   );
 };
 
-export default StoryboardPage; 
+export default StoryboardPage;

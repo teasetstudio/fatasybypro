@@ -2,12 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOrganization } from '../../context/OrganizationContext';
 
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-}
-
 const ProjectsTab: React.FC = () => {
   const { projects, createProject } = useOrganization();
   const [showProjectModal, setShowProjectModal] = useState(false);
