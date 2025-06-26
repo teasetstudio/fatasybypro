@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import CanvasDraw from 'react-canvas-draw';
-import { IShot } from '../types';
-import { useStoryboard } from '../context/StoryboardContext';
-import { useToast } from '../context/ToastContext';
-import ConfirmationModal from './ConfirmationModal';
+import { IShot } from '../../types';
+import { useStoryboard } from '../../context/StoryboardContext';
+import { useToast } from '../../context/ToastContext';
+import { ConfirmationModal, Tooltip } from '@/components/library';
 import debounce from 'lodash.debounce';
+import Indicators from './ShotComponents/Indicators';
 
 interface Props {
   shot: IShot;
@@ -23,7 +24,7 @@ const Shot = ({
   brushSmoothness,
   onPreview,
 }: Props) => {
-  const { statuses, updateShotStatus, currentAspectRatio, updateShot, deleteShot, uploadImage, deleteImage, notSavedShotIds, flushDebouncedSaveShot, getShotRefData } = useStoryboard();
+  const { currentAspectRatio, updateShot, deleteShot, uploadImage, deleteImage, notSavedShotIds, flushDebouncedSaveShot, getShotRefData } = useStoryboard();
   const { showToast } = useToast();
   const canvasRef = useRef<CanvasDraw | null>(null);
   const savedDataRef = useRef<string>(shot.canvasData);
@@ -36,8 +37,6 @@ const Shot = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleClear = () => {
     if (canvasRef.current) {
@@ -122,29 +121,6 @@ const Shot = ({
     debouncedHandleDrawEnd()
   };
 
-  const handleStatusSelect = async (statusId: string | null) => {
-    try {
-      await updateShotStatus(shot.id, statusId);
-      setIsStatusDropdownOpen(false);
-    } catch (error) {
-      console.error('Error updating shot status:', error);
-    }
-  };
-
-  const getDropdownPosition = () => {
-    if (!statusDropdownRef.current) return 'bottom';
-    
-    const rect = statusDropdownRef.current.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const dropdownHeight = 200; // Approximate height of dropdown
-    
-    // Check if there's enough space below
-    const spaceBelow = viewportHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    
-    return spaceBelow >= dropdownHeight || spaceBelow > spaceAbove ? 'bottom' : 'top';
-  };
-
   const downloadDrawing = () => {
     if (canvasRef.current) {
       try {
@@ -208,24 +184,6 @@ const Shot = ({
     };
   }, [debouncedHandleDrawEnd]);
 
-  // Close status dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (!target.closest('.status-dropdown-container')) {
-        setIsStatusDropdownOpen(false);
-      }
-    };
-
-    if (isStatusDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isStatusDropdownOpen]);
-
   useEffect(() => {
     if (canvasRef.current) {
       const savedData = getShotRefData(shot.id)?.canvasData;
@@ -241,101 +199,7 @@ const Shot = ({
       className={`flex flex-col bg-white rounded-lg shadow-md p-4 relative ${currentAspectRatio.cardWidth} mb-6`}
     >
       {/* Shot number and unsaved indicator container */}
-      <div className="absolute -top-3 -left-3 flex items-center gap-1 z-10">
-        <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md">
-          {index + 1}
-        </div>
-        {notSavedShotIds.has(shot.id) && (
-          <div className="relative">
-            <button 
-              onClick={() => flushDebouncedSaveShot(shot.id)}
-              disabled={notSavedShotIds.get(shot.id) === 'saving'}
-              className={`w-6 h-6 rounded-full text-white flex items-center justify-center shadow-md transition-colors group/indicator ${
-                notSavedShotIds.get(shot.id) === 'saving'
-                  ? 'bg-yellow-400 cursor-not-allowed'
-                  : 'bg-yellow-500 hover:bg-yellow-600 cursor-pointer'
-              }`}
-              title={notSavedShotIds.get(shot.id) === 'saving' ? 'Saving changes...' : 'Click to save changes'}
-            >
-              {notSavedShotIds.get(shot.id) === 'saving' ? (
-                <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                </svg>
-              )}
-              {/* Tooltip */}
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/indicator:opacity-100 group-hover/indicator:visible transition-all duration-200 z-50">
-                <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  {notSavedShotIds.get(shot.id) === 'saving' 
-                    ? 'Saving changes...' 
-                    : 'Unsaved changes. Wait 1 min or click here to save changes'}
-                </div>
-                {/* Tooltip arrow */}
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
-              </div>
-            </button>
-          </div>
-        )}
-        <div className='w-6 h-6 rounded-full relative group/status shadow-sm border border-gray-200 cursor-pointer status-dropdown-container' 
-             onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-             ref={statusDropdownRef}>
-          <div 
-            className="w-full h-full rounded-full border-2 border-white"
-            style={{ backgroundColor: shot.status?.color || '#6B7280' }}
-          />
-          {/* Status Dropdown */}
-          {isStatusDropdownOpen && (
-            <div className={`absolute left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-32 status-dropdown-container ${
-              getDropdownPosition() === 'bottom' 
-                ? 'top-full mt-2' 
-                : 'bottom-full mb-2'
-            }`}>
-              <div className="py-1">
-                {/* No status option */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStatusSelect(null);
-                  }}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                >
-                  <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                  <span>No status</span>
-                </button>
-                {/* Available statuses */}
-                {statuses.map((status) => (
-                  <button
-                    key={status.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleStatusSelect(status.id);
-                    }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
-                  >
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: status.color }}
-                    ></div>
-                    <span>{status.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {/* Tooltip */}
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/status:opacity-100 group-hover/status:visible transition-all duration-200 z-50">
-            <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-              {shot.status?.name || 'No status'} (Click to change)
-            </div>
-            {/* Tooltip arrow */}
-            <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
-          </div>
-        </div>
-      </div>
+      <Indicators shot={shot} index={index} />
 
       {/* Canvas controls */}
       <div className='flex justify-between'>
@@ -392,37 +256,31 @@ const Shot = ({
               {isDeletingImage ? 'Deleting...' : 'Delete Image'}
             </button>
           ) : (
-            <label className="relative cursor-pointer group/upload">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                aria-label="Upload background image (max 10MB)"
-                disabled={isImageLoading}
-              />
-              <span className={`bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm inline-flex items-center ${isImageLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {isImageLoading ? (
-                  <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                  </svg>
-                )}
-                {isImageLoading ? 'Uploading...' : 'Upload Image'}
-              </span>
-              {/* Tooltip */}
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover/upload:opacity-100 group-hover/upload:visible transition-all duration-200 z-50">
-                <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  Upload background image (max 10MB)
-                </div>
-                {/* Tooltip arrow */}
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 transform rotate-45"></div>
-              </div>
-            </label>
+            <Tooltip content="Upload background image (max 10MB)">
+              <label className="relative cursor-pointer group/upload">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  aria-label="Upload background image (max 10MB)"
+                  disabled={isImageLoading}
+                />
+                <span className={`bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm inline-flex items-center ${isImageLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  {isImageLoading ? (
+                    <svg className="animate-spin h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                  {isImageLoading ? 'Uploading...' : 'Upload Image'}
+                </span>
+              </label>
+            </Tooltip>
           )}
           <button
             onClick={() => setIsDeleteModalOpen(true)}

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import AppPage from '../components/layouts/AppPage';
-import ConfirmationModal from '../components/ConfirmationModal';
-import { useOrganization } from '../context/OrganizationContext';
+import AppPage from '@/components/layouts/AppPage';
+import { ConfirmationModal } from '@/components/library';
+import { useOrganization } from '@/context/OrganizationContext';
 
 interface ProjectDetails {
   id: string;

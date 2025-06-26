@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import Shot from './Shot';
-import { IShot } from '../types';
+import { IShot } from '../../types';
 
 interface Props {
   shot: IShot;

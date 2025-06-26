@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import DrawingTools, { aspectRatios } from './DrawingTools';
-import { getFileSizeError } from '../utils';
-import { useToast } from '../context/ToastContext';
-import { IShot } from '../types';
+import { getFileSizeError } from '../../utils';
+import { useToast } from '../../context/ToastContext';
+import { IShot } from '../../types';
 
 interface Props {
   shot: IShot | null;

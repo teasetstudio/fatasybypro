@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import debounce from 'lodash.debounce';
 import { IShot, IShotStatus, IStoryboard } from '../types';
-import { aspectRatios } from '../components/DrawingTools';
+import { aspectRatios } from '../components/storyboard/DrawingTools';
 import { api } from '../services/api';
 import { useLocation } from 'react-router-dom';
 import { getFileSizeError, TOAST_MESSAGES } from '../utils';

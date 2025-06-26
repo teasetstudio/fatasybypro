@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import ConfirmationModal from '../../components/ConfirmationModal';
-import { useOrganization } from '../../context/OrganizationContext';
+import { ConfirmationModal } from '@/components/library';
+import { useOrganization } from '@/context/OrganizationContext';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const SettingsTab = () => {

@@ -4,10 +4,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 
 import { createEmptyCanvasData, safelyGetCanvasData, safelyLoadCanvasData } from '../utils';
-import DrawingTools, { smoothnessOptions, aspectRatios } from '../components/DrawingTools';
-import PreviewShotModal from '../components/PreviewShotModal';
+import DrawingTools, { smoothnessOptions, aspectRatios } from '../components/storyboard/DrawingTools';
+import PreviewShotModal from '../components/storyboard/PreviewShotModal';
 import { IShot } from '../types';
-import ShotDraggable from '../components/ShotDraggable';
+import ShotDraggable from '../components/storyboard/ShotDraggable';
 import AppPage from '../components/layouts/AppPage';
 
 const StoryboardPage = () => {

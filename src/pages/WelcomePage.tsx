@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import Page from '../components/layouts/Page';
 import { Link } from 'react-router-dom';
 import CanvasDraw from 'react-canvas-draw';
-import { smoothnessOptions } from '../components/DrawingTools';
+import { smoothnessOptions } from '../components/storyboard/DrawingTools';
 import { useAuth } from '../context/AuthContext';
 
 const WelcomePage: React.FC = () => {
