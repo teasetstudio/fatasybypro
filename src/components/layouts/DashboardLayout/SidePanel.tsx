@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import SidePanelDropdown from './SidePanelDropdown';
-import { useBreakpoints } from '@/hooks/useBreakpoints';
 
 interface SidePanelProps {
   onClose?: () => void;
@@ -25,7 +24,6 @@ const SidePanel = ({ onClose }: SidePanelProps) => {
   const { user, logout } = useAuth();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const { lg } = useBreakpoints();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -47,7 +45,7 @@ const SidePanel = ({ onClose }: SidePanelProps) => {
 
   return (
     <div className="w-64 bg-white shadow-lg flex flex-col h-full">
-      <div className={`p-4 border-b ${!lg && 'mt-10'}`}>
+      <div className="p-4 border-b">
         <Link 
           to="/dashboard" 
           className="block hover:bg-gray-50 rounded-lg p-2 -m-2 transition-colors duration-200"

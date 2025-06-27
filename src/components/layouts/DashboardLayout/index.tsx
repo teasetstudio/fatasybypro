@@ -26,7 +26,7 @@ const DashboardLayout = () => {
   return (
     <div className="relative h-screen bg-gray-100">
       {/* Floating Mobile Toggle Button */}
-      <BurgerButton className='lg:hidden fixed top-1 left-1 z-50' isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} onOpen={openMobileSidebar} />
+      <BurgerButton className={`lg:hidden fixed top-1 z-50 ${isMobileSidebarOpen ? 'right-1' : 'left-1'}`} isOpen={isMobileSidebarOpen} onClose={closeMobileSidebar} onOpen={openMobileSidebar} />
       {/* Mobile Overlay */}
       {isMobileSidebarOpen && (
         <div 
@@ -43,7 +43,7 @@ const DashboardLayout = () => {
         fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
         ${lg ?
           !isDesktopSidebarOpen && '-translate-x-full'
-          : isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          : isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }
       `}>
         <SidePanel onClose={closeMobileSidebar} />
