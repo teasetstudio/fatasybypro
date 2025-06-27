@@ -18,12 +18,12 @@ type ReturnType = {
 
 export const useBreakpoints = (): ReturnType => {
   const [breakpoints, setBreakpoints] = useState<ReturnType>({
-    xs: false,
-    sm: false,
-    md: false,
-    lg: false,
-    xl: false,
-    '2xl': false,
+    xs: window.innerWidth >= BREAKPOINTS.xs,
+    sm: window.innerWidth >= BREAKPOINTS.sm,
+    md: window.innerWidth >= BREAKPOINTS.md,
+    lg: window.innerWidth >= BREAKPOINTS.lg,
+    xl: window.innerWidth >= BREAKPOINTS.xl,
+    '2xl': window.innerWidth >= BREAKPOINTS['2xl'],
   });
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export const useBreakpoints = (): ReturnType => {
         '2xl': width >= BREAKPOINTS['2xl'],
       });
     };
-    checkBreakpoints();
+
     window.addEventListener('resize', checkBreakpoints);
     return () => window.removeEventListener('resize', checkBreakpoints);
   }, []);
