@@ -1,15 +1,16 @@
 import React from 'react'
 
 interface Props {
+  className?: string;
   toggleDesktopSidebar: () => void;
   isDesktopSidebarOpen: boolean;
 }
 
-const SidePanelToggleButton = ({ toggleDesktopSidebar, isDesktopSidebarOpen }: Props) => {
+const SidePanelToggleButton = ({ toggleDesktopSidebar, isDesktopSidebarOpen, className }: Props) => {
   return (
     <button
       onClick={toggleDesktopSidebar}
-      className={`hidden lg:block fixed z-50 top-4  bg-slate-200 p-1.5 rounded-md shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out border border-gray-500 ${
+      className={`bg-slate-200 p-1.5 rounded-md shadow-md hover:bg-gray-100 transition-all duration-300 ease-in-out border border-gray-500 ${className} ${
         isDesktopSidebarOpen ? 'left-56' : 'left-0 rounded-l-none border-l-0 pl-0.5'
       }`}
     >
