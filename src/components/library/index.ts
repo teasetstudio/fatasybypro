@@ -1,2 +1,4 @@
 export { default as Tooltip } from './Tooptip';
-export { default as ConfirmationModal } from './modals/ConfirmationModal';
+export * from './modals';
+export * from './buttons';
+

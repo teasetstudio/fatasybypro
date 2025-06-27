@@ -26,7 +26,7 @@ import OrganizationDetailsPage from './pages/OrganizationPage';
 import ProjectDetailsPage from './pages/ProjectPage';
 import StoryboardPage from './pages/StoryboardPage';
 import ProjectsPage from './pages/ProjectsPage';
-import DashboardLayout from './components/layouts/DashboardLayout';
+import DashboardLayout from '@/components/layouts/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 
 const AuthenticatedContent = ({ children }: { children: React.ReactNode }) => {
