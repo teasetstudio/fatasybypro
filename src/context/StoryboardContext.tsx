@@ -29,6 +29,7 @@ interface StoryboardContextType {
   addShotView: (shotId: string) => Promise<void>;
   deleteShotView: (shotId: string, viewId: string) => Promise<void>;
   updateShotView: (shotId: string, viewId: string, data: { name?: string; description?: string }) => Promise<void>;
+  reorderShotViews: (shotId: string, reorderedViews: IShotView[]) => Promise<void>;
 }
 
 const StoryboardContext = createContext<StoryboardContextType | undefined>(undefined);
@@ -539,6 +540,46 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [projectId, shots, showSuccess]);
 
+  const reorderShotViews = useCallback(async (shotId: string, reorderedViews: IShotView[]) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+
+    try {
+      // Update local state immediately for instant UI feedback
+      const updatedShots = shots.map(shot => {
+        if (shot.id === shotId) {
+          return {
+            ...shot,
+            views: reorderedViews
+          };
+        }
+        return shot;
+      });
+
+      shotsDataRef.current = updatedShots;
+      setShots(updatedShots);
+
+      // Update the backend for each view that changed order
+      for (let i = 0; i < reorderedViews.length; i++) {
+        const view = reorderedViews[i];
+        const newOrder = i + 1;
+        
+        if (view.order !== newOrder) {
+          await api.put(`/projects/${projectId}/storyboard/shot/${shotId}/views/${view.id}/change-order`, {
+            newOrder
+          });
+        }
+      }
+
+      showSuccess('View order updated successfully');
+    } catch (error) {
+      console.error('Error reordering shot views:', error);
+      throw error;
+    }
+  }, [projectId, shots, showSuccess]);
+
   const getShotRefData = (shotId: string) => {
     return shotsDataRef.current.find(s => s.id === shotId);
   }
@@ -590,6 +631,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     addShotView,
     deleteShotView,
     updateShotView,
+    reorderShotViews,
   };
 
   return (
