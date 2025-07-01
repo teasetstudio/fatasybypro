@@ -58,16 +58,20 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
   const handleUndo = () => {
     if (canvasRef.current) {
       canvasRef.current.undo();
+      if (canvasRef.current) {
+        savedDataRef.current = canvasRef.current.getSaveData();
+      }
       updateShot(shot.id, { views: [{ id: view.id, canvas: canvasRef.current }] });
     }
   };
 
   const handleClear = () => {
     if (canvasRef.current) {
-      console.log('clear');
       canvasRef.current.clear();
       imageRef.current = null;
-      console.log('canvasRef.current', canvasRef.current.getSaveData());
+      if (canvasRef.current) {
+        savedDataRef.current = canvasRef.current.getSaveData();
+      }
       updateShot(shot.id, { views: [{ id: view.id, canvas: canvasRef.current, image: null }] });
       setIsBackgroundImage(false);
     }
