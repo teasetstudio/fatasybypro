@@ -36,7 +36,7 @@ interface SortableViewItemProps {
   onViewChange: (index: number) => void;
   onEditView: (viewId: string, viewName: string) => void;
   onDeleteView: (viewId: string, viewIndex: number) => void;
-  canDelete: boolean;
+  moreThanOneView: boolean;
 }
 
 const SortableViewItem: React.FC<SortableViewItemProps> = ({
@@ -46,7 +46,7 @@ const SortableViewItem: React.FC<SortableViewItemProps> = ({
   onViewChange,
   onEditView,
   onDeleteView,
-  canDelete,
+  moreThanOneView,
 }) => {
   const {
     attributes,
@@ -83,17 +83,18 @@ const SortableViewItem: React.FC<SortableViewItemProps> = ({
 
         <div className="absolute -top-3 -right-1 group-hover/view:-top-6 group-hover/view:opacity-100 opacity-0 transition-all duration-150 flex gap-1">
           {/* Drag Handle */}
-          <button
-            {...attributes}
-            {...listeners}
-            className="w-6 h-6 rounded-md bg-gray-300/90 backdrop-blur-sm text-gray-600 hover:bg-gray-500 hover:text-white hover:scale-105 transition-all duration-200 flex items-center justify-center shadow-md cursor-grab active:cursor-grabbing"
-            title="Drag to reorder"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-            </svg>
-          </button>
-          
+          {moreThanOneView && (
+            <button
+              {...attributes}
+              {...listeners}
+              className="w-6 h-6 rounded-md bg-gray-300/90 backdrop-blur-sm text-gray-600 hover:bg-gray-500 hover:text-white hover:scale-105 transition-all duration-200 flex items-center justify-center shadow-md cursor-grab active:cursor-grabbing"
+              title="Drag to reorder"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+              </svg>
+            </button>
+          )}
           <button
             onClick={() => onEditView(view.id, view.name || `View ${viewIndex + 1}`)}
             className="w-6 h-6 rounded-md bg-blue-300/90 backdrop-blur-sm text-white hover:bg-blue-600 hover:scale-105 transition-all duration-200 flex items-center justify-center shadow-md"
@@ -104,7 +105,7 @@ const SortableViewItem: React.FC<SortableViewItemProps> = ({
             </svg>
           </button>
           
-          {canDelete && (
+          {moreThanOneView && (
             <button
               onClick={() => onDeleteView(view.id, viewIndex)}
               className="w-6 h-6 rounded-md bg-red-300/90 backdrop-blur-sm text-white hover:bg-red-600 hover:scale-105 transition-all duration-200 flex items-center justify-center shadow-md"
@@ -268,7 +269,7 @@ const ShotViewSelector: React.FC<Props> = ({
                 onViewChange={onViewChange}
                 onEditView={handleEditView}
                 onDeleteView={handleDeleteView}
-                canDelete={!!(shot.views && shot.views.length > 1)}
+                moreThanOneView={!!(shot.views && shot.views.length > 1)}
               />
             ))}
             <Tooltip content="Add Shot View">
