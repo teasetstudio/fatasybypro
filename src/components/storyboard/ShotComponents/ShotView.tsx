@@ -9,8 +9,6 @@ import { useToast } from '@/context/ToastContext';
 interface IProps {
   shot: IShot;
   view: IShotView;
-  shotIndex: number;
-  viewIndex: number;
   brushColor: string;
   brushRadius: number;
   brushSmoothness: number;
@@ -150,6 +148,10 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
       }
     }
   }, []);
+
+  useEffect(() => {
+    console.log('view', view.id);
+  }, [view.id]);
 
   return (
     <div>

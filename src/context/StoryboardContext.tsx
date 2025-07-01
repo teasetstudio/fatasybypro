@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import debounce from 'lodash.debounce';
-import { IShot, IShotStatus, IShotView, IStoryboard, IUpdateShot } from '../types';
-import { aspectRatios } from '../components/storyboard/DrawingTools';
-import { api } from '../services/api';
 import { useLocation } from 'react-router-dom';
-import { getFileSizeError, TOAST_MESSAGES } from '../utils';
+import debounce from 'lodash.debounce';
+import { IShot, IShotStatus, IShotView, IStoryboard, IUpdateShot } from '@/types';
+import { aspectRatios } from '@/components/storyboard/DrawingTools';
+import { api } from '@/services/api';
+import { getFileSizeError, TOAST_MESSAGES } from '@/utils';
 import { useToast } from './ToastContext';
 
 interface StoryboardContextType {
@@ -26,6 +26,8 @@ interface StoryboardContextType {
   changeShotOrder: (shotId: string, newOrder: number) => Promise<void>;
   uploadImage: (image: File, shotId: string, viewId: string) => Promise<string>;
   deleteImage: (url: string) => Promise<void>;
+  addShotView: (shotId: string) => Promise<void>;
+  deleteShotView: (shotId: string, viewId: string) => Promise<void>;
 }
 
 const StoryboardContext = createContext<StoryboardContextType | undefined>(undefined);
@@ -208,13 +210,14 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         const hasChanges = Object.entries(data).some(([key, value]) => {
           // Skip canvas property as it contains circular references
           if (key === 'views') {
-            return data.views?.some((subobject, index) => {
+            return data.views?.some((subobject) => {
               const hasChanges = Object.entries(subobject).some(([subkey, subvalue]) => {
+                const oldView = oldShot.views?.find(v => v.id === subobject.id);
                 if (subkey === 'canvas') {
                   const newCanvasData = subobject.canvas?.getSaveData();
-                  return oldShot.views?.[index]?.canvasData !== newCanvasData;
+                  return oldView?.canvasData !== newCanvasData;
                 }
-                return JSON.stringify(oldShot.views?.[index]?.[subkey as keyof IShotView]) !== JSON.stringify(subvalue);
+                return JSON.stringify(oldView?.[subkey as keyof IShotView]) !== JSON.stringify(subvalue);
               })
               return hasChanges
             })
@@ -391,17 +394,17 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Return the server error message
         throw new Error(serverError);
       }
-      
+
       // Handle network errors
       if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
         throw new Error('Network error. Please check your internet connection and try again.');
       }
-      
+
       // Handle timeout errors
       if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
         throw new Error('Upload timeout. Please try again with a smaller file or check your connection.');
       }
-      
+
       // Generic error fallback
       throw new Error('Failed to upload image. Please try again.');
     }
@@ -422,6 +425,77 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.error('Error deleting image:', error);
     }
   }, [showSuccess]);
+
+  const addShotView = useCallback(async (shotId: string) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+
+    try {
+      const { data } = await api.post(`/projects/${projectId}/storyboard/shot/${shotId}/views`, {
+        name: '',
+        description: ''
+      });
+
+      if (data && data.view) {
+        // Update the shot in local state to include the new view
+        const updatedShots = shots.map(shot => {
+          if (shot.id === shotId) {
+            const newView = {
+              id: data.view.id,
+              name: data.view.name,
+              description: data.view.description,
+              order: data.view.order,
+              image: data.view.image,
+              canvasData: data.view.canvasData
+            };
+
+            return {
+              ...shot,
+              views: [...(shot.views || []), newView]
+            };
+          }
+          return shot;
+        });
+
+        shotsDataRef.current = updatedShots;
+        setShots(updatedShots);
+        showSuccess('Shot view created successfully');
+      }
+    } catch (error) {
+      console.error('Error creating shot view:', error);
+    }
+  }, [projectId, shots, showSuccess]);
+
+  const deleteShotView = useCallback(async (shotId: string, viewId: string) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+
+    try {
+      await api.delete(`/projects/${projectId}/storyboard/shot/${shotId}/views/${viewId}`);
+
+      // Update the shot in local state to remove the deleted view
+      const updatedShots = shots.map(shot => {
+        if (shot.id === shotId) {
+          const updatedViews = (shot.views || []).filter(view => view.id !== viewId);
+          return {
+            ...shot,
+            views: updatedViews
+          };
+        }
+        return shot;
+      });
+
+      shotsDataRef.current = updatedShots;
+      setShots(updatedShots);
+      showSuccess('Shot view deleted successfully');
+    } catch (error) {
+      console.error('Error deleting shot view:', error);
+    }
+  }, [projectId, shots, showSuccess]);
 
   const getShotRefData = (shotId: string) => {
     return shotsDataRef.current.find(s => s.id === shotId);
@@ -471,6 +545,8 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     updateShotStatus,
     uploadImage,
     deleteImage,
+    addShotView,
+    deleteShotView,
   };
 
   return (

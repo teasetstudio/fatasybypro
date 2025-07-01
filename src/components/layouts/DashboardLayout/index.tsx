@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SidePanel from './SidePanel';
 import { BurgerButton } from '@/components/library';
 import SidePanelToggleButton from './SidePanelToggleButton';
@@ -7,9 +7,18 @@ import { useBreakpoints } from '@/hooks/useBreakpoints';
 
 const DashboardLayout = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(() => {
+    // Initialize from localStorage, default to true if not found
+    const saved = localStorage.getItem('isDesktopSidebarOpen');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
 
   const { lg } = useBreakpoints();
+
+  // Save to localStorage whenever the state changes
+  useEffect(() => {
+    localStorage.setItem('isDesktopSidebarOpen', JSON.stringify(isDesktopSidebarOpen));
+  }, [isDesktopSidebarOpen]);
 
   const openMobileSidebar = () => {
     setIsMobileSidebarOpen(true);
