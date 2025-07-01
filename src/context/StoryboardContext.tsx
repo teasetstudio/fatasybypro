@@ -28,6 +28,7 @@ interface StoryboardContextType {
   deleteImage: (url: string) => Promise<void>;
   addShotView: (shotId: string) => Promise<void>;
   deleteShotView: (shotId: string, viewId: string) => Promise<void>;
+  updateShotView: (shotId: string, viewId: string, data: { name?: string; description?: string }) => Promise<void>;
 }
 
 const StoryboardContext = createContext<StoryboardContextType | undefined>(undefined);
@@ -497,6 +498,47 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [projectId, shots, showSuccess]);
 
+  const updateShotView = useCallback(async (shotId: string, viewId: string, data: { name?: string; description?: string }) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+
+    try {
+      const { data: responseData } = await api.patch(`/projects/${projectId}/storyboard/shot/${shotId}/views/${viewId}`, data);
+
+      if (responseData && responseData.view) {
+        // Update the shot in local state to include the updated view
+        const updatedShots = shots.map(shot => {
+          if (shot.id === shotId) {
+            const updatedViews = (shot.views || []).map(view => {
+              if (view.id === viewId) {
+                return {
+                  ...view,
+                  ...responseData.view
+                };
+              }
+              return view;
+            });
+
+            return {
+              ...shot,
+              views: updatedViews
+            };
+          }
+          return shot;
+        });
+
+        shotsDataRef.current = updatedShots;
+        setShots(updatedShots);
+        showSuccess('Shot view updated successfully');
+      }
+    } catch (error) {
+      console.error('Error updating shot view:', error);
+      throw error;
+    }
+  }, [projectId, shots, showSuccess]);
+
   const getShotRefData = (shotId: string) => {
     return shotsDataRef.current.find(s => s.id === shotId);
   }
@@ -547,6 +589,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     deleteImage,
     addShotView,
     deleteShotView,
+    updateShotView,
   };
 
   return (
