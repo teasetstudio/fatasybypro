@@ -13,19 +13,33 @@ export interface IShotStatus {
   color: string;
 }
 
+export interface IShotView {
+  id: string;
+  name?: string;
+  description?: string;
+  order: number;
+  image?: string | null;
+
+  canvas?: CanvasDraw | null;
+  canvasData?: string;
+}
+
 export interface IShot {
   id: string;
   description: string;
-  image: string | null;
-  canvas?: CanvasDraw | null;
-  canvasData?: string;
+  // image: string | null;
+
   order: number;
   name?: string;
   duration?: number;
   aspectRatio?: AspectRatio;
 
   status?: IShotStatus;
+
+  views?: IShotView[];
 }
+
+export type IUpdateShot = Partial<Omit<IShot, 'views'>> & { views?: Partial<IShotView>[] };
 
 export interface IStoryboard {
   id: string;

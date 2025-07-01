@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import debounce from 'lodash.debounce';
-import { IShot, IShotStatus, IStoryboard } from '../types';
+import { IShot, IShotStatus, IShotView, IStoryboard, IUpdateShot } from '../types';
 import { aspectRatios } from '../components/storyboard/DrawingTools';
 import { api } from '../services/api';
 import { useLocation } from 'react-router-dom';
@@ -17,7 +17,7 @@ interface StoryboardContextType {
   getShotRefData: (shotId: string) => IShot | undefined;
   addShot: () => void;
   deleteShot: (id: string) => void;
-  updateShot: (id: string, data: Partial<IShot>) => void;
+  updateShot: (id: string, data: IUpdateShot) => void;
   updateShotStatus: (shotId: string, statusId: string | null) => Promise<void>;
   setShots: React.Dispatch<React.SetStateAction<IShot[]>>;
   currentAspectRatio: typeof aspectRatios[0];
@@ -92,14 +92,15 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (data && data.shot) {
         const newShot = {
           id: data.shot.id,
-          description: data.shot.description || '',
-          image: data.shot.image,
-          canvasData: data.shot.canvasData,
-          order: data.shot.order,
           name: data.shot.name,
+          description: data.shot.description || '',
+          // image: data.shot.image,
+          // canvasData: data.shot.canvasData,
+          order: data.shot.order,
           duration: data.shot.duration,
           aspectRatio: data.shot.aspectRatio,
-          status: data.shot.status
+          status: data.shot.status,
+          views: data.shot.views,
         };
 
         shotsDataRef.current.push(newShot);
@@ -160,8 +161,11 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const { data } = await api.put(`/projects/${projectId}/storyboard/update-shot`, {
         id: shot.id,
         description: shot.description,
-        image: shot.image,
-        canvasData: shot.canvas?.getSaveData()
+        views: shot.views?.map(view => ({
+          id: view.id,
+          image: view.image,
+          canvasData: view.canvas?.getSaveData()
+        }))
       });
 
       console.log('Shot saved successfully:', data);
@@ -195,7 +199,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [saveShot]);
 
-  const updateShot = useCallback((id: string, data: Partial<IShot>) => {
+  const updateShot = useCallback((id: string, data: IUpdateShot) => {
       if (shotsDataRef.current && shotsDataRef.current.length > 0) {
         const oldShot = shotsDataRef.current.find(s => s.id === id);
         if (!oldShot) return;
@@ -203,15 +207,35 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // Check if there are actual changes
         const hasChanges = Object.entries(data).some(([key, value]) => {
           // Skip canvas property as it contains circular references
-          if (key === 'canvas') {
-            const newCanvasData = data.canvas?.getSaveData();
-            data.canvasData = newCanvasData;
-            return oldShot.canvasData !== newCanvasData;
+          if (key === 'views') {
+            return data.views?.some((subobject, index) => {
+              const hasChanges = Object.entries(subobject).some(([subkey, subvalue]) => {
+                if (subkey === 'canvas') {
+                  const newCanvasData = subobject.canvas?.getSaveData();
+                  return oldShot.views?.[index]?.canvasData !== newCanvasData;
+                }
+                return JSON.stringify(oldShot.views?.[index]?.[subkey as keyof IShotView]) !== JSON.stringify(subvalue);
+              })
+              return hasChanges
+            })
           }
           return JSON.stringify(oldShot[key as keyof IShot]) !== JSON.stringify(value);
         });
 
-        const newShot = { ...oldShot, ...data };
+        if (data.views) {
+          data.views = data.views.map((view, index) => {
+            if (view.canvas) {
+              const newCanvasData = view.canvas?.getSaveData();
+              if (data.views) {
+                data.views[index].canvasData = newCanvasData;
+              }
+              return { ...view, canvasData: newCanvasData };
+            }
+            return view;
+          })
+        }
+
+        const newShot = { ...oldShot, ...data, views: oldShot.views?.map(view => ({ ...view, ...data.views?.find(v => v.id === view.id) })) };
 
         shotsDataRef.current = shotsDataRef.current.map((s) =>
           s.id === id ? newShot : s

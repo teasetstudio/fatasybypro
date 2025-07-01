@@ -27,15 +27,21 @@ const StoryboardPage = () => {
   const modalShotRef = useRef<IShot>({
     id: '',
     description: '',
-    image: null,
-    canvas: null,
-    canvasData: '',
-    order: 0
+    order: 0,
+    views: [
+      {
+        id: '',
+        order: 1,
+        image: null,
+        canvas: null,
+        canvasData: '',
+      }
+    ],
   });
 
   const [brushColor, setBrushColor] = useState("#000000");
   const [brushRadius, setBrushRadius] = useState(2);
-  const [brushSmoothness, setBrushSmoothness] = useState(smoothnessOptions[1].value);
+  const [brushSmoothness, setBrushSmoothness] = useState(smoothnessOptions[0].value);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,9 +58,9 @@ const StoryboardPage = () => {
 
   // Add a function to handle drawing tool changes that preserves modal canvas state
   const handleDrawingToolChange = (action: () => void) => {
-    if (isModalOpen && modalShotRef.current && modalShotRef.current.canvas) {
+    if (isModalOpen && modalShotRef.current && modalShotRef.current.views?.[0]?.canvas) {
       try {
-        const currentData = modalShotRef.current.canvas.getSaveData();
+        const currentData = modalShotRef.current.views?.[0]?.canvas.getSaveData();
         setCurrentModalCanvasData(currentData);
         setModalCanvasChanged(true);
       } catch (error) {
@@ -81,7 +87,7 @@ const StoryboardPage = () => {
     const selectedRatio = aspectRatios.find(ratio => ratio.name === e.target.value);
     if (selectedRatio) {
       const updatedShots = shots.map(shot => {
-        const canvas = shotsDataRef.current.find(s => s.id === shot.id)?.canvas || null;
+        const canvas = shotsDataRef.current.find(s => s.id === shot.id)?.views?.[0]?.canvas || null;
         const canvasData = safelyGetCanvasData(canvas, selectedRatio.width, selectedRatio.height);
         return {
           ...shot,
@@ -94,7 +100,7 @@ const StoryboardPage = () => {
 
       setTimeout(() => {
         updatedShots.forEach(shot => {
-          const canvas = shotsDataRef.current.find(s => s.id === shot.id)?.canvas || null;
+          const canvas = shotsDataRef.current.find(s => s.id === shot.id)?.views?.[0]?.canvas || null;
           if (canvas && shot.canvasData) {
             safelyLoadCanvasData(canvas, shot.canvasData, selectedRatio.width, selectedRatio.height, true);
           }
@@ -111,14 +117,25 @@ const StoryboardPage = () => {
     }
 
     const shotData = shotsDataRef.current.find(s => s.id === shotId);
-    const canvas = shotData?.canvas || null;
+    const canvas = shotData?.views?.[0]?.canvas || null;
 
     if (shotData && canvas) {
       try {
         const canvasData = safelyGetCanvasData(canvas, currentAspectRatio.width * 2, currentAspectRatio.height * 2);
-        modalShotRef.current.canvas = canvas;
-        modalShotRef.current.canvasData = canvasData;
-        modalShotRef.current.image = shotData.image;
+        // modalShotRef.current.canvas = canvas;
+        // modalShotRef.current.canvasData = canvasData;
+        // modalShotRef.current.image = shotData.image;
+        modalShotRef.current = {
+          ...modalShotRef.current,
+          views: [
+            {
+              id: shot.views?.[0]?.id || '',
+              order: 1,
+              canvas: canvas,
+              canvasData: canvasData,
+            }
+          ]
+        }
         setSelectedShot(shot);
         setSelectedShotId(shotId);
         setIsModalOpen(true);
@@ -137,9 +154,9 @@ const StoryboardPage = () => {
   }, []);
 
   const saveModalChanges = () => {
-    if (selectedShot && modalShotRef.current && modalShotRef.current.canvas) {
+    if (selectedShot && modalShotRef.current && modalShotRef.current.views?.[0]?.canvas) {
       try {
-        const saveData = modalShotRef.current.canvas.getSaveData();
+        const saveData = modalShotRef.current.views?.[0]?.canvas.getSaveData();
         const shotToUpdate = shotsDataRef.current.find(s => s.id === selectedShot.id);
 
         if (!shotToUpdate) {
@@ -147,20 +164,20 @@ const StoryboardPage = () => {
           return;
         }
 
-        if (shotToUpdate.canvas) {
-          safelyLoadCanvasData(shotToUpdate.canvas, saveData, currentAspectRatio.width, currentAspectRatio.height, true);
+        if (shotToUpdate.views?.[0]?.canvas) {
+          safelyLoadCanvasData(shotToUpdate.views?.[0]?.canvas, saveData, currentAspectRatio.width, currentAspectRatio.height, true);
         }
 
         shotsDataRef.current = shotsDataRef.current.map(s => 
           s.id === selectedShot.id 
-            ? { ...s, canvasData: saveData, image: modalShotRef.current.image } 
+            ? { ...s, views: [{ id: s.views?.[0]?.id || '', order: 1, canvasData: saveData, image: modalShotRef.current.views?.[0]?.image }] } 
             : s
         );
 
         setShots(
           shots.map(shot => 
             shot.id === selectedShot.id 
-              ? { ...shot, canvasData: saveData, image: modalShotRef.current.image } 
+              ? { ...shot, views: [{ id: shot.views?.[0]?.id || '', order: 1, canvasData: saveData, image: modalShotRef.current.views?.[0]?.image }] } 
               : shot
           )
         );
@@ -175,7 +192,7 @@ const StoryboardPage = () => {
   };
 
   useEffect(() => {
-    if (isModalOpen && modalShotRef.current && modalShotRef.current.canvas && selectedShotId !== null) {
+    if (isModalOpen && modalShotRef.current && modalShotRef.current.views?.[0]?.canvas && selectedShotId !== null) {
       try {
         const shotId = selectedShotId;
 
@@ -186,20 +203,20 @@ const StoryboardPage = () => {
         }
 
         setTimeout(() => {
-          if (modalShotRef.current && modalShotRef.current.canvas) {
+          if (modalShotRef.current && modalShotRef.current.views?.[0]?.canvas) {
             if (modalCanvasChanged && currentModalCanvasData) {
               console.log(`Loading preserved modal canvas data after tool change`);
-              safelyLoadCanvasData(modalShotRef.current.canvas, currentModalCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
+              safelyLoadCanvasData(modalShotRef.current.views?.[0]?.canvas, currentModalCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
               return;
             }
 
-            if (!modalShotRef.current.canvasData) {
+            if (!modalShotRef.current.views?.[0]?.canvasData) {
               console.log(`No modal canvas data available for shot ${shotId}, using empty canvas`);
               const emptyCanvasData = createEmptyCanvasData(currentAspectRatio.width * 2, currentAspectRatio.height * 2);
-              safelyLoadCanvasData(modalShotRef.current.canvas, emptyCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
+              safelyLoadCanvasData(modalShotRef.current.views?.[0]?.canvas, emptyCanvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
               return;
             }
-            safelyLoadCanvasData(modalShotRef.current.canvas, modalShotRef.current.canvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
+            safelyLoadCanvasData(modalShotRef.current.views?.[0]?.canvas, modalShotRef.current.views?.[0]?.canvasData, currentAspectRatio.width * 2, currentAspectRatio.height * 2, true);
             console.log(`Successfully loaded canvas data into modal for shot ${shotId}`);
           }
         }, 100);

@@ -55,8 +55,12 @@ const PreviewShotModal: React.FC<Props> = ({
       }
 
       // Save current drawing state before changing background
-      if (modalShotRef.current.canvas) {
-        modalShotRef.current.canvasData = modalShotRef.current.canvas.getSaveData();
+      if (modalShotRef.current?.views?.[0]?.canvas) {
+        // @ts-ignore
+        const canvasData = modalShotRef.current.views[0].canvas.getSaveData();
+        if (modalShotRef.current.views[0]) {
+          modalShotRef.current.views[0].canvasData = canvasData;
+        }
       }
       // set to false to force a re-render
       setIsBackgroundImage(false);
@@ -64,7 +68,10 @@ const PreviewShotModal: React.FC<Props> = ({
       const reader = new FileReader();
       reader.onload = (e) => {
         const uploadedImage = e.target?.result as string;
-        modalShotRef.current.image = uploadedImage;
+        // @ts-ignore
+        if (modalShotRef.current?.views?.[0]) {
+          modalShotRef.current.views[0].image = uploadedImage;
+        }
         // updateGlobalFramesData(id, { image: uploadedImage, canvas: canvasRef.current });
         setIsBackgroundImage(true);
       };
@@ -78,12 +85,19 @@ const PreviewShotModal: React.FC<Props> = ({
 
   const removeBackgroundImage = () => {
     // Save current drawing state before removing background
-    if (modalShotRef.current.canvas) {
-      modalShotRef.current.canvasData = modalShotRef.current.canvas.getSaveData();
+    if (modalShotRef.current?.views?.[0]?.canvas) {
+      // @ts-ignore
+      const canvasData = modalShotRef.current.views[0].canvas.getSaveData();
+      if (modalShotRef.current.views[0]) {
+        modalShotRef.current.views[0].canvasData = canvasData;
+      }
     }
 
     // Clear background image state
-    modalShotRef.current.image = null;
+    // @ts-ignore
+    if (modalShotRef.current?.views?.[0]) {
+      modalShotRef.current.views[0].image = null;
+    }
     setIsBackgroundImage(false);
     setTimeout(() => {
       setIsBackgroundImage(true);
@@ -91,8 +105,8 @@ const PreviewShotModal: React.FC<Props> = ({
   };
 
   const getImageSrc = () => {
-    if (modalShotRef.current && modalShotRef.current.image) {
-      return modalShotRef.current.image;
+    if (modalShotRef.current && modalShotRef.current.views?.[0]?.image) {
+      return modalShotRef.current.views?.[0]?.image;
     }
     return undefined;
   };
@@ -154,8 +168,8 @@ const PreviewShotModal: React.FC<Props> = ({
                   <div className="flex items-center space-x-2 ml-auto">
                     <button
                       onClick={() => {
-                        if (modalShotRef.current && modalShotRef.current.canvas) {
-                          modalShotRef.current.canvas.undo();
+                        if (modalShotRef.current && modalShotRef.current.views?.[0]?.canvas) {
+                          modalShotRef.current.views?.[0]?.canvas.undo();
                         }
                       }}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-sm"
@@ -167,8 +181,8 @@ const PreviewShotModal: React.FC<Props> = ({
                     </button>
                     <button
                       onClick={() => {
-                        if (modalShotRef.current && modalShotRef.current.canvas) {
-                          modalShotRef.current.canvas.clear();
+                        if (modalShotRef.current && modalShotRef.current.views?.[0]?.canvas) {
+                          modalShotRef.current.views?.[0]?.canvas.clear();
                         }
                       }}
                       className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-sm"
@@ -199,7 +213,7 @@ const PreviewShotModal: React.FC<Props> = ({
                         <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                       </div>
                     </label>
-                    {shot?.image && (
+                    {shot?.views?.[0]?.image && (
                       <button
                         onClick={removeBackgroundImage}
                         className="bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded text-sm inline-flex items-center"
@@ -219,7 +233,10 @@ const PreviewShotModal: React.FC<Props> = ({
                       key={`modal-canvas-${shot?.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
                       ref={(canvasDraw: CanvasDraw | null) => {
                         if (modalShotRef && modalShotRef.current) {
-                          modalShotRef.current.canvas = canvasDraw;
+                          // @ts-ignore
+                          if (modalShotRef.current.views?.[0]) {
+                            modalShotRef.current.views[0].canvas = canvasDraw;
+                          }
                         }
                       }}
                       canvasWidth={currentAspectRatio.width * 2}
@@ -232,7 +249,7 @@ const PreviewShotModal: React.FC<Props> = ({
                       enablePanAndZoom={false}
                       immediateLoading={true}
                       imgSrc={getImageSrc()}
-                      saveData={modalShotRef.current?.canvasData}
+                      saveData={modalShotRef.current?.views?.[0]?.canvasData}
                       className="rounded"
                     />
                   </div>
