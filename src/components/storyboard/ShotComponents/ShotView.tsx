@@ -85,7 +85,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
       setIsImageLoading(true);
 
       try {
-        const imageUrl = await uploadImage(file);
+        const imageUrl = await uploadImage(file, shot.id, view.id);
         
         imageRef.current = imageUrl;
         updateShot(shot.id, { views: [{ id: view.id, image: imageUrl, canvas: canvasRef.current }] });

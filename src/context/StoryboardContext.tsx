@@ -24,7 +24,7 @@ interface StoryboardContextType {
   setCurrentAspectRatio: React.Dispatch<React.SetStateAction<typeof aspectRatios[0]>>;
   getStoryboard: (projectId: string) => Promise<void>;
   changeShotOrder: (shotId: string, newOrder: number) => Promise<void>;
-  uploadImage: (image: File) => Promise<string>;
+  uploadImage: (image: File, shotId: string, viewId: string) => Promise<string>;
   deleteImage: (url: string) => Promise<void>;
 }
 
@@ -337,7 +337,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [shots, projectId, showSuccess]);
 
-  const uploadImage = useCallback(async (image: File) => {
+  const uploadImage = useCallback(async (image: File, shotId: string, viewId: string) => {
     if (!projectId) {
       console.error('No project ID available');
       throw new Error('No project ID available');
@@ -354,6 +354,8 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const formData = new FormData();
       formData.append('image', image);
       formData.append('projectId', projectId);
+      formData.append('shotId', shotId);
+      formData.append('viewId', viewId);
 
       const response = await api.post('/upload-images', formData, {
         headers: {
