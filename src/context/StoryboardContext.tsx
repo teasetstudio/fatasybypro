@@ -7,6 +7,10 @@ import { api } from '@/services/api';
 import { getFileSizeError, TOAST_MESSAGES } from '@/utils';
 import { useToast } from './ToastContext';
 
+interface InstantlySetShotsOptionsProps {
+  updateShotsDataRef?: boolean;
+}
+
 interface StoryboardContextType {
   storyboard: IStoryboard | null;
   shots: IShot[];
@@ -20,8 +24,7 @@ interface StoryboardContextType {
   duplicateShot: (id: string, name?: string, description?: string) => Promise<void>;
   updateShot: (id: string, data: IUpdateShot) => void;
   updateShotStatus: (shotId: string, statusId: string | null) => Promise<void>;
-  setShots: React.Dispatch<React.SetStateAction<IShot[]>>;
-  instantlySetShots: (newShots: IShot[], options?: { updateShotsDataRef?: boolean }) => void;
+  instantlySetShots: (newShots: IShot[], options?: InstantlySetShotsOptionsProps) => void;
   currentAspectRatio: typeof aspectRatios[0];
   setCurrentAspectRatio: React.Dispatch<React.SetStateAction<typeof aspectRatios[0]>>;
   getStoryboard: (projectId: string) => Promise<void>;
@@ -50,22 +53,27 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const { showSuccess } = useToast();
 
   // Create a debounced function to update shots state
-  const debouncedSetShots = useMemo(() => 
-    debounce((newShots: IShot[]) => {
-      setShots([...newShots]);
-    }, 300),
-    []
-  );
+  // const debouncedSetShots = useMemo(() => 
+  //   debounce((newShots: IShot[]) => {
+  //     if (shotsDataRef.current) {
+  //       setShots([...shotsDataRef.current]);
+  //     }
+  //   }, 1000),
+  //   []
+  // );
 
-  const instantlySetShots = useCallback((newShots: IShot[], options?: { updateShotsDataRef?: boolean }) => {
+  // This function is used when you need to setShots immediately and not wait for the debounced function to finish
+  // you cannot use setShots directly because if there is a debounced function waiting to finish, it will replave setShots
+  // you would see this if you are in the timing of the debounced function
+  const instantlySetShots = useCallback((newShots: IShot[], options?: InstantlySetShotsOptionsProps) => {
     // check if there is a waiting debounced debouncedSetShots
-    debouncedSetShots.cancel();
+    // debouncedSetShots.cancel();
     const updatedShots = [...newShots];
     setShots(updatedShots);
     if (options?.updateShotsDataRef) {
       shotsDataRef.current = updatedShots;
     }
-  }, [debouncedSetShots]);
+  }, []);
 
   const getStoryboard = useCallback(async (projectId: string) => {
     try {
@@ -228,21 +236,27 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [shots, projectId, showSuccess, instantlySetShots]);
 
-  const saveShot = useCallback(async (shot: IShot) => {
+  const saveShot = useCallback(async (shotId: string) => {
     if (!projectId) {
       console.error('No project ID available');
       return;
     }
+    const storedShot = shotsDataRef.current.find(s => s.id === shotId);
+    if (!storedShot) {
+      console.error('Shot not longer exists');
+      return;
+    }
+    
     try {
       setNotSavedShotIds(prev => {
         const newMap = new Map(prev);
-        newMap.set(shot.id, 'saving');
+        newMap.set(storedShot.id, 'saving');
         return newMap;
       });
       await api.put(`/projects/${projectId}/storyboard/update-shot`, {
-        id: shot.id,
-        description: shot.description,
-        views: shot.views?.map(view => ({
+        id: storedShot.id,
+        description: storedShot.description,
+        views: storedShot.views?.map(view => ({
           id: view.id,
           image: view.image,
           canvasData: view.canvas?.getSaveData()
@@ -250,10 +264,10 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
 
       // Delete the debounced function after successful save
-      debouncedSaveShots.current.delete(shot.id);
+      debouncedSaveShots.current.delete(shotId);
       setNotSavedShotIds(prev => {
         const newMap = new Map(prev);
-        newMap.delete(shot.id);
+        newMap.delete(shotId);
         return newMap;
       });
     } catch (error) {
@@ -261,21 +275,21 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [projectId]);
 
-  const debouncedSaveShot = useCallback((shot: IShot) => {
-    if (!debouncedSaveShots.current.has(shot.id)) {
+  const debouncedSaveShot = useCallback((shotId: string) => {
+    if (!debouncedSaveShots.current.has(shotId)) {
       debouncedSaveShots.current.set(
-        shot.id,
+        shotId,
         debounce(saveShot, 60000)
       );
       setNotSavedShotIds(prev => {
         const newMap = new Map(prev);
-        newMap.set(shot.id, shot.id);
+        newMap.set(shotId, shotId);
         return newMap;
       });
     }
-    const debouncedFn = debouncedSaveShots.current.get(shot.id);
+    const debouncedFn = debouncedSaveShots.current.get(shotId);
     if (debouncedFn) {
-      debouncedFn(shot);
+      debouncedFn(shotId);
     }
   }, [saveShot]);
 
@@ -325,14 +339,14 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // All shots are updated at once and stored in shotsDataRef.current
         // debounce makes sense because we want to save all shots at once
         // And reduce the number of rerenders
-        debouncedSetShots(shotsDataRef.current);
+        instantlySetShots(shotsDataRef.current);
 
         if (hasChanges) {
-          debouncedSaveShot(newShot);
+          debouncedSaveShot(id);
         }
       }
     },
-    [debouncedSetShots, debouncedSaveShot]
+    [debouncedSaveShot, instantlySetShots]
   );
 
   const flushDebouncedSaveShot = (shotId: string) => {
@@ -674,9 +688,9 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      debouncedSetShots.cancel();
+      // debouncedSetShots.cancel();
     };
-  }, [debouncedSetShots]);
+  }, []);
 
   // Flush debounced functions on navigation
   useEffect(() => {
@@ -701,7 +715,6 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     deleteShot,
     duplicateShot,
     updateShot,
-    setShots,
     instantlySetShots,
     currentAspectRatio,
     setCurrentAspectRatio,
