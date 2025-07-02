@@ -17,6 +17,7 @@ interface StoryboardContextType {
   getShotRefData: (shotId: string) => IShot | undefined;
   addShot: () => void;
   deleteShot: (id: string) => void;
+  duplicateShot: (id: string, name?: string, description?: string) => Promise<void>;
   updateShot: (id: string, data: IUpdateShot) => void;
   updateShotStatus: (shotId: string, statusId: string | null) => Promise<void>;
   setShots: React.Dispatch<React.SetStateAction<IShot[]>>;
@@ -148,6 +149,58 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       showSuccess(TOAST_MESSAGES.SHOT_DELETED);
     } catch (error) {
       console.error('Error deleting shot:', error);
+    }
+  }, [shots, projectId, showSuccess]);
+
+  const duplicateShot = useCallback(async (idToDuplicate: string, name?: string, description?: string) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+
+    try {
+      const shotToDuplicate = shots.find(s => s.id === idToDuplicate);
+      if (!shotToDuplicate) {
+        console.error('Shot not found');
+        return;
+      }
+
+      // Duplicate the shot from the backend
+      const { data } = await api.post(`/projects/${projectId}/storyboard/shot/${idToDuplicate}/duplicate`, {
+        name,
+        description
+      });
+
+      if (data && data.shot) {
+        const duplicatedShot = {
+          id: data.shot.id,
+          name: data.shot.name,
+          description: data.shot.description || '',
+          order: data.shot.order,
+          duration: data.shot.duration,
+          aspectRatio: data.shot.aspectRatio,
+          status: data.shot.status,
+          views: data.shot.views,
+        };
+
+        // Update local state - insert the duplicated shot after the original
+        const updatedShots = shots.map(shot => {
+          if (shot.order > shotToDuplicate.order) {
+            return { ...shot, order: shot.order + 1 };
+          }
+          return shot;
+        });
+
+        // Insert the duplicated shot at the correct position
+        const insertIndex = updatedShots.findIndex(s => s.id === idToDuplicate) + 1;
+        updatedShots.splice(insertIndex, 0, duplicatedShot);
+
+        shotsDataRef.current = updatedShots;
+        setShots(updatedShots);
+        showSuccess('Shot duplicated successfully');
+      }
+    } catch (error) {
+      console.error('Error duplicating shot:', error);
     }
   }, [shots, projectId, showSuccess]);
 
@@ -620,6 +673,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     getShotRefData,
     addShot,
     deleteShot,
+    duplicateShot,
     updateShot,
     setShots,
     currentAspectRatio,
