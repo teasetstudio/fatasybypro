@@ -18,7 +18,7 @@ const StoryboardPage = () => {
     shotsDataRef,
     getStoryboard,
     addShot,
-    setShots,
+    instantlySetShots,
     currentAspectRatio,
     setCurrentAspectRatio,
     changeShotOrder,
@@ -95,7 +95,7 @@ const StoryboardPage = () => {
         };
       });
 
-      setShots(updatedShots);
+      instantlySetShots(updatedShots, { updateShotsDataRef: true });
       setCurrentAspectRatio(selectedRatio);
 
       setTimeout(() => {
@@ -174,12 +174,13 @@ const StoryboardPage = () => {
             : s
         );
 
-        setShots(
+        instantlySetShots(
           shots.map(shot => 
             shot.id === selectedShot.id 
               ? { ...shot, views: [{ id: shot.views?.[0]?.id || '', order: 1, canvasData: saveData, image: modalShotRef.current.views?.[0]?.image }] } 
               : shot
-          )
+          ),
+          { updateShotsDataRef: true }
         );
 
         console.log(`Successfully saved changes for shot ${selectedShot.id}`);
@@ -253,8 +254,7 @@ const StoryboardPage = () => {
     const [movedShot] = newShots.splice(oldIndex, 1);
     newShots.splice(newIndex, 0, movedShot);
     
-    setShots(newShots);
-    shotsDataRef.current = newShots;
+    instantlySetShots(newShots, { updateShotsDataRef: true });
 
     // Then update the backend
     try {
@@ -263,8 +263,7 @@ const StoryboardPage = () => {
     } catch (error) {
       console.error('Error reordering shot:', error);
       // Revert the local state if the API call fails
-      setShots(shots);
-      shotsDataRef.current = shots;
+      instantlySetShots(newShots, { updateShotsDataRef: true });
     } finally {
       setIsReordering(false);
     }

@@ -83,10 +83,12 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
       setIsImageLoading(true);
 
       try {
-        const imageUrl = await uploadImage(file, shot.id, view.id);
+        const shotId = shot.id;
+        const viewId = view.id;
+        const imageUrl = await uploadImage(file, shotId, viewId);
         
         imageRef.current = imageUrl;
-        updateShot(shot.id, { views: [{ id: view.id, image: imageUrl, canvas: canvasRef.current }] });
+        updateShot(shotId, { views: [{ id: viewId, image: imageUrl, canvas: canvasRef.current }] });
         setIsBackgroundImage(true);
       } catch (error: any) {
         // Show user-friendly error message
@@ -109,7 +111,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
     try {
       // If there's an image URL, delete it from the server
       if (view.image) {
-        await deleteImage(view.image);
+        await deleteImage(shot.id, view.id);
       }
       
       // Clear background image state

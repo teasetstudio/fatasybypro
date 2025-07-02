@@ -21,12 +21,13 @@ interface StoryboardContextType {
   updateShot: (id: string, data: IUpdateShot) => void;
   updateShotStatus: (shotId: string, statusId: string | null) => Promise<void>;
   setShots: React.Dispatch<React.SetStateAction<IShot[]>>;
+  instantlySetShots: (newShots: IShot[], options?: { updateShotsDataRef?: boolean }) => void;
   currentAspectRatio: typeof aspectRatios[0];
   setCurrentAspectRatio: React.Dispatch<React.SetStateAction<typeof aspectRatios[0]>>;
   getStoryboard: (projectId: string) => Promise<void>;
   changeShotOrder: (shotId: string, newOrder: number) => Promise<void>;
   uploadImage: (image: File, shotId: string, viewId: string) => Promise<string>;
-  deleteImage: (url: string) => Promise<void>;
+  deleteImage: (shotId: string, viewId: string) => Promise<void>;
   addShotView: (shotId: string) => Promise<void>;
   deleteShotView: (shotId: string, viewId: string) => Promise<void>;
   updateShotView: (shotId: string, viewId: string, data: { name?: string; description?: string }) => Promise<void>;
@@ -56,6 +57,16 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     []
   );
 
+  const instantlySetShots = useCallback((newShots: IShot[], options?: { updateShotsDataRef?: boolean }) => {
+    // check if there is a waiting debounced debouncedSetShots
+    debouncedSetShots.cancel();
+    const updatedShots = [...newShots];
+    setShots(updatedShots);
+    if (options?.updateShotsDataRef) {
+      shotsDataRef.current = updatedShots;
+    }
+  }, [debouncedSetShots]);
+
   const getStoryboard = useCallback(async (projectId: string) => {
     try {
       const { data } = await api.get(`/projects/${projectId}/storyboard`);
@@ -72,14 +83,14 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
         });
-        setShots(data.shots);
+        instantlySetShots(data.shots);
         setStatuses(data.statuses);
       }
     } catch (error) {
       console.error('Error fetching shots:', error);
       throw error;
     }
-  }, []);
+  }, [instantlySetShots]);
 
   // Use useCallback for addShot to avoid dependency issues
   const addShot = useCallback(async () => {
@@ -109,13 +120,13 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         };
 
         shotsDataRef.current.push(newShot);
-        setShots([...shotsDataRef.current]);
+        instantlySetShots(shotsDataRef.current);
         showSuccess(TOAST_MESSAGES.SHOT_CREATED);
       }
     } catch (error) {
       console.error('Error creating shot:', error);
     }
-  }, [projectId, shots.length, showSuccess]);
+  }, [projectId, shots.length, showSuccess, instantlySetShots]);
 
   const deleteShot = useCallback(async (idToDelete: string) => {
     if (!projectId) {
@@ -133,6 +144,19 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Delete the shot from the backend
       await api.delete(`/projects/${projectId}/storyboard/shot/${idToDelete}/delete-shot`);
 
+      // Clean up debounced save functions and not saved shot IDs
+      const debouncedFn = debouncedSaveShots.current.get(idToDelete);
+      if (debouncedFn) {
+        debouncedFn.cancel();
+        debouncedSaveShots.current.delete(idToDelete);
+      }
+      
+      setNotSavedShotIds(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(idToDelete);
+        return newMap;
+      });
+
       // Update local state
       const updatedShots = shots
         .filter(s => s.id !== idToDelete)
@@ -145,12 +169,12 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         .sort((a, b) => a.order - b.order);
 
       shotsDataRef.current = updatedShots;
-      setShots(updatedShots);
+      instantlySetShots(updatedShots);
       showSuccess(TOAST_MESSAGES.SHOT_DELETED);
     } catch (error) {
       console.error('Error deleting shot:', error);
     }
-  }, [shots, projectId, showSuccess]);
+  }, [shots, projectId, showSuccess, instantlySetShots]);
 
   const duplicateShot = useCallback(async (idToDuplicate: string, name?: string, description?: string) => {
     if (!projectId) {
@@ -196,13 +220,13 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         updatedShots.splice(insertIndex, 0, duplicatedShot);
 
         shotsDataRef.current = updatedShots;
-        setShots(updatedShots);
+        instantlySetShots(updatedShots);
         showSuccess('Shot duplicated successfully');
       }
     } catch (error) {
       console.error('Error duplicating shot:', error);
     }
-  }, [shots, projectId, showSuccess]);
+  }, [shots, projectId, showSuccess, instantlySetShots]);
 
   const saveShot = useCallback(async (shot: IShot) => {
     if (!projectId) {
@@ -215,7 +239,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         newMap.set(shot.id, 'saving');
         return newMap;
       });
-      const { data } = await api.put(`/projects/${projectId}/storyboard/update-shot`, {
+      await api.put(`/projects/${projectId}/storyboard/update-shot`, {
         id: shot.id,
         description: shot.description,
         views: shot.views?.map(view => ({
@@ -225,7 +249,6 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }))
       });
 
-      console.log('Shot saved successfully:', data);
       // Delete the debounced function after successful save
       debouncedSaveShots.current.delete(shot.id);
       setNotSavedShotIds(prev => {
@@ -242,7 +265,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!debouncedSaveShots.current.has(shot.id)) {
       debouncedSaveShots.current.set(
         shot.id,
-        debounce(saveShot, 100000)
+        debounce(saveShot, 60000)
       );
       setNotSavedShotIds(prev => {
         const newMap = new Map(prev);
@@ -358,12 +381,12 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }).sort((a, b) => a.order - b.order);
 
       shotsDataRef.current = updatedShots;
-      setShots(updatedShots);
+      instantlySetShots(updatedShots);
     } catch (error) {
       console.error('Error changing shot order:', error);
       throw error;
     }
-  }, [shots, projectId]);
+  }, [shots, projectId, instantlySetShots]);
 
   const updateShotStatus = useCallback(async (shotId: string, statusId: string | null) => {
     if (!projectId) {
@@ -386,14 +409,14 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         );
 
         shotsDataRef.current = updatedShots;
-        setShots(updatedShots);
+        instantlySetShots(updatedShots);
         showSuccess('Shot status updated successfully');
       }
     } catch (error) {
       console.error('Error updating shot status:', error);
       throw error;
     }
-  }, [shots, projectId, showSuccess]);
+  }, [shots, projectId, showSuccess, instantlySetShots]);
 
   const uploadImage = useCallback(async (image: File, shotId: string, viewId: string) => {
     if (!projectId) {
@@ -465,11 +488,14 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [projectId, showSuccess]);
 
-  const deleteImage = useCallback(async (url: string) => {
+  const deleteImage = useCallback(async (shotId: string, viewId: string) => {
+    if (!projectId) {
+      console.error('No project ID available');
+      return;
+    }
+
     try {
-      const response = await api.delete('/delete-images', {
-        data: { url }
-      });
+      const response = await api.put(`/projects/${projectId}/storyboard/shot/${shotId}/views/${viewId}/delete-image`);
 
       if (response.status !== 200) {
         console.error('Failed to delete image from server');
@@ -479,7 +505,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (error) {
       console.error('Error deleting image:', error);
     }
-  }, [showSuccess]);
+  }, [projectId, showSuccess]);
 
   const addShotView = useCallback(async (shotId: string) => {
     if (!projectId) {
@@ -515,13 +541,13 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         });
 
         shotsDataRef.current = updatedShots;
-        setShots(updatedShots);
+        instantlySetShots(updatedShots);
         showSuccess('Shot view created successfully');
       }
     } catch (error) {
       console.error('Error creating shot view:', error);
     }
-  }, [projectId, shots, showSuccess]);
+  }, [projectId, shots, showSuccess, instantlySetShots]);
 
   const deleteShotView = useCallback(async (shotId: string, viewId: string) => {
     if (!projectId) {
@@ -545,12 +571,12 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
 
       shotsDataRef.current = updatedShots;
-      setShots(updatedShots);
+      instantlySetShots(updatedShots);
       showSuccess('Shot view deleted successfully');
     } catch (error) {
       console.error('Error deleting shot view:', error);
     }
-  }, [projectId, shots, showSuccess]);
+  }, [projectId, shots, showSuccess, instantlySetShots]);
 
   const updateShotView = useCallback(async (shotId: string, viewId: string, data: { name?: string; description?: string }) => {
     if (!projectId) {
@@ -584,14 +610,14 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         });
 
         shotsDataRef.current = updatedShots;
-        setShots(updatedShots);
+        instantlySetShots(updatedShots);
         showSuccess('Shot view updated successfully');
       }
     } catch (error) {
       console.error('Error updating shot view:', error);
       throw error;
     }
-  }, [projectId, shots, showSuccess]);
+  }, [projectId, shots, showSuccess, instantlySetShots]);
 
   const reorderShotViews = useCallback(async (shotId: string, reorderedViews: IShotView[]) => {
     if (!projectId) {
@@ -612,7 +638,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
 
       shotsDataRef.current = updatedShots;
-      setShots(updatedShots);
+      instantlySetShots(updatedShots);
 
       // Update the backend for each view that changed order
       for (let i = 0; i < reorderedViews.length; i++) {
@@ -631,7 +657,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.error('Error reordering shot views:', error);
       throw error;
     }
-  }, [projectId, shots, showSuccess]);
+  }, [projectId, shots, showSuccess, instantlySetShots]);
 
   const getShotRefData = (shotId: string) => {
     return shotsDataRef.current.find(s => s.id === shotId);
@@ -676,6 +702,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     duplicateShot,
     updateShot,
     setShots,
+    instantlySetShots,
     currentAspectRatio,
     setCurrentAspectRatio,
     changeShotOrder,
