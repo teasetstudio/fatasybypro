@@ -32,7 +32,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
     if (canvasRef.current) {
       updateShot(shot.id, { views: [{ id: view.id, canvas: canvasRef.current }] });
     }
-  }, 500), [shot.id, view.id]);
+  }, 100), [shot.id, view.id]);
 
   const handleDrawEnd = () => {
     setIsDrawing(false);
@@ -148,10 +148,6 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
       }
     }
   }, []);
-
-  useEffect(() => {
-    console.log('view', view.id);
-  }, [view.id]);
 
   return (
     <div>
