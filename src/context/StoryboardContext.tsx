@@ -31,8 +31,8 @@ interface StoryboardContextType {
   changeShotOrder: (shotId: string, newOrder: number) => Promise<void>;
   uploadImage: (image: File, shotId: string, viewId: string) => Promise<string>;
   deleteImage: (shotId: string, viewId: string) => Promise<void>;
-  addShotView: (shotId: string) => Promise<void>;
-  deleteShotView: (shotId: string, viewId: string) => Promise<void>;
+  addShotView: (shotId: string) => Promise<IShot[] | undefined>;
+  deleteShotView: (shotId: string, viewId: string) => Promise<IShot[] | undefined>;
   updateShotView: (shotId: string, viewId: string, data: { name?: string; description?: string }) => Promise<void>;
   reorderShotViews: (shotId: string, reorderedViews: IShotView[]) => Promise<void>;
 }
@@ -246,7 +246,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       console.error('Shot not longer exists');
       return;
     }
-    
+
     try {
       setNotSavedShotIds(prev => {
         const newMap = new Map(prev);
@@ -557,6 +557,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         shotsDataRef.current = updatedShots;
         instantlySetShots(updatedShots);
         showSuccess('Shot view created successfully');
+        return updatedShots;
       }
     } catch (error) {
       console.error('Error creating shot view:', error);
@@ -587,6 +588,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       shotsDataRef.current = updatedShots;
       instantlySetShots(updatedShots);
       showSuccess('Shot view deleted successfully');
+      return updatedShots;
     } catch (error) {
       console.error('Error deleting shot view:', error);
     }
@@ -658,7 +660,7 @@ export const StoryboardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       for (let i = 0; i < reorderedViews.length; i++) {
         const view = reorderedViews[i];
         const newOrder = i + 1;
-        
+
         if (view.order !== newOrder) {
           await api.put(`/projects/${projectId}/storyboard/shot/${shotId}/views/${view.id}/change-order`, {
             newOrder

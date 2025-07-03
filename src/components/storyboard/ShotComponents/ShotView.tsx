@@ -8,31 +8,31 @@ import { useToast } from '@/context/ToastContext';
 
 interface IProps {
   shot: IShot;
-  view: IShotView;
+  currentView: IShotView;
   brushColor: string;
   brushRadius: number;
   brushSmoothness: number;
   onPreview: (id: string) => void;
 }
 
-const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPreview }: IProps) => {
+const ShotView = ({ shot, currentView, brushColor, brushRadius, brushSmoothness, onPreview }: IProps) => {
   const { currentAspectRatio, updateShot, uploadImage, deleteImage, getShotRefData } = useStoryboard();
   const canvasRef = useRef<CanvasDraw | null>(null);
-  const savedDataRef = useRef<string>(view.canvasData);
+  const savedDataRef = useRef<string>(currentView.canvasData);
   const imageRef = useRef<string | null>(null);
 
   const { showToast } = useToast();
 
-  const [isBackgroundImage, setIsBackgroundImage] = useState(!!view.image);
+  const [isBackgroundImage, setIsBackgroundImage] = useState(!!currentView.image);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
 
   const debouncedHandleDrawEnd = useCallback(debounce(() => {
     if (canvasRef.current) {
-      updateShot(shot.id, { views: [{ id: view.id, canvas: canvasRef.current }] });
+      updateShot(shot.id, { views: [{ id: currentView.id, canvas: canvasRef.current }] });
     }
-  }, 100), [shot.id, view.id]);
+  }, 100), [shot.id, currentView.id]);
 
   const handleDrawEnd = () => {
     setIsDrawing(false);
@@ -59,7 +59,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
       if (canvasRef.current) {
         savedDataRef.current = canvasRef.current.getSaveData();
       }
-      updateShot(shot.id, { views: [{ id: view.id, canvas: canvasRef.current }] });
+      updateShot(shot.id, { views: [{ id: currentView.id, canvas: canvasRef.current }] });
     }
   };
 
@@ -70,7 +70,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
       if (canvasRef.current) {
         savedDataRef.current = canvasRef.current.getSaveData();
       }
-      updateShot(shot.id, { views: [{ id: view.id, canvas: canvasRef.current, image: null }] });
+      updateShot(shot.id, { views: [{ id: currentView.id, canvas: canvasRef.current, image: null }] });
       setIsBackgroundImage(false);
     }
   };
@@ -84,7 +84,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
 
       try {
         const shotId = shot.id;
-        const viewId = view.id;
+        const viewId = currentView.id;
         const imageUrl = await uploadImage(file, shotId, viewId);
         
         imageRef.current = imageUrl;
@@ -110,29 +110,29 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
     setIsDeletingImage(true);
     try {
       // If there's an image URL, delete it from the server
-      if (view.image) {
-        await deleteImage(shot.id, view.id);
+      if (currentView.image) {
+        await deleteImage(shot.id, currentView.id);
       }
       
       // Clear background image state
       imageRef.current = null;
       setIsBackgroundImage(false);
-      updateShot(shot.id, { views: [{ id: view.id, image: null, canvas: canvasRef.current }] });
+      updateShot(shot.id, { views: [{ id: currentView.id, image: null, canvas: canvasRef.current }] });
     } finally {
       setIsDeletingImage(false);
     }
   };
 
   useEffect(() => {
-    if (imageRef.current !== view.image) {
-      imageRef.current = view.image || null;
+    if (imageRef.current !== currentView.image) {
+      imageRef.current = currentView.image || null;
       // When shot's canvasData changes, load it into the canvas
       setIsBackgroundImage(false)
       setTimeout(() => {
         setIsBackgroundImage(true)
       }, 10)
     }
-  }, [view.image]);
+  }, [currentView.image]);
 
   // Cleanup debounced function on unmount
   useEffect(() => {
@@ -143,7 +143,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
 
   useEffect(() => {
     if (canvasRef.current) {
-      const savedData = getShotRefData(shot.id)?.views?.find(v => v.id === view.id)?.canvasData;
+      const savedData = getShotRefData(shot.id)?.views?.find(v => v.id === currentView.id)?.canvasData;
       if (savedData) {
         savedDataRef.current = savedData;
         canvasRef.current.loadSaveData(savedData);
@@ -171,7 +171,7 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
         onMouseDown={handleDrawStart}
       >
         <CanvasDraw 
-          key={`canvas-${view.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
+          key={`canvas-${currentView.id}-${isBackgroundImage ? 'img' : 'no-img'}`}
           ref={canvasRef}
           className="rounded"
           brushColor={brushColor}
@@ -191,4 +191,4 @@ const ShotView = ({ shot, view, brushColor, brushRadius, brushSmoothness, onPrev
   )
 }
 
-export default ShotView
+export default ShotView;

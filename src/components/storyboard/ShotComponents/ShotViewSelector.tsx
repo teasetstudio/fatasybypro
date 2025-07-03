@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IShot } from '@/types';
+import { IShot, IShotView } from '@/types';
 import { useStoryboard } from '@/context/StoryboardContext';
 import { ConfirmationModal, Tooltip } from '@/components/library';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
@@ -25,15 +25,15 @@ import { CSS } from '@dnd-kit/utilities';
 
 interface Props {
   shot: IShot;
-  currentViewIndex: number;
-  onViewChange: (index: number) => void;
+  onViewChange: (viewId: string) => void;
+  currentView: IShotView | null;
 }
 
 interface SortableViewItemProps {
-  view: any;
+  view: IShotView;
   viewIndex: number;
-  currentViewIndex: number;
-  onViewChange: (index: number) => void;
+  currentView: IShotView | null;
+  onViewChange: (viewId: string) => void;
   onEditView: (viewId: string, viewName: string) => void;
   onDeleteView: (viewId: string, viewIndex: number) => void;
   moreThanOneView: boolean;
@@ -42,7 +42,7 @@ interface SortableViewItemProps {
 const SortableViewItem: React.FC<SortableViewItemProps> = ({
   view,
   viewIndex,
-  currentViewIndex,
+  currentView,
   onViewChange,
   onEditView,
   onDeleteView,
@@ -71,9 +71,9 @@ const SortableViewItem: React.FC<SortableViewItemProps> = ({
     >
       <div className="inline-block relative">
         <button
-          onClick={() => onViewChange(viewIndex)}
+          onClick={() => onViewChange(view.id)}
           className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-            viewIndex === currentViewIndex
+            view.id === currentView?.id
               ? 'bg-blue-500 text-white'
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
@@ -104,7 +104,7 @@ const SortableViewItem: React.FC<SortableViewItemProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
-          
+
           {moreThanOneView && (
             <button
               onClick={() => onDeleteView(view.id, viewIndex)}
@@ -124,8 +124,8 @@ const SortableViewItem: React.FC<SortableViewItemProps> = ({
 
 const ShotViewSelector: React.FC<Props> = ({
   shot,
-  currentViewIndex,
   onViewChange,
+  currentView,
 }) => {
   const { addShotView, deleteShotView, updateShotView, reorderShotViews } = useStoryboard();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -153,15 +153,6 @@ const ShotViewSelector: React.FC<Props> = ({
         
         try {
           await reorderShotViews(shot.id, reorderedViews);
-          
-          // Update the current view index if the active view was moved
-          if (oldIndex === currentViewIndex) {
-            onViewChange(newIndex);
-          } else if (oldIndex < currentViewIndex && newIndex >= currentViewIndex) {
-            onViewChange(currentViewIndex - 1);
-          } else if (oldIndex > currentViewIndex && newIndex <= currentViewIndex) {
-            onViewChange(currentViewIndex + 1);
-          }
         } catch (error) {
           console.error('Error reordering views:', error);
         }
@@ -171,9 +162,10 @@ const ShotViewSelector: React.FC<Props> = ({
 
   const handleAddView = async () => {
     try {
-      await addShotView(shot.id);
-      if (shot.views) {
-        onViewChange(shot.views.length);
+      const updatedShots = await addShotView(shot.id);
+      if (updatedShots) {
+        const updatedShot = updatedShots.find(s => s.id === shot.id);
+        onViewChange(updatedShot?.views?.[updatedShot?.views?.length - 1].id ?? '');
       }
     } catch (error) {
       console.error('Error adding new view:', error);
@@ -196,13 +188,14 @@ const ShotViewSelector: React.FC<Props> = ({
     if (!viewToDelete) return;
 
     try {
-      await deleteShotView(shot.id, viewToDelete.id);
+      const deletedViewIndex = shot?.views?.findIndex(v => v.id === viewToDelete?.id);
+      const updatedShots = await deleteShotView(shot.id, viewToDelete.id);
 
       if (shot.views && shot.views.length > 1) {
-        if (viewToDelete.index === currentViewIndex) {
-          onViewChange(Math.max(0, currentViewIndex - 1));
-        } else if (viewToDelete.index < currentViewIndex) {
-          onViewChange(currentViewIndex - 1);
+        if (viewToDelete.id === currentView?.id) {
+          const updatedShot = updatedShots?.find(s => s.id === shot.id);
+          const showViewIndex = deletedViewIndex === 0 ? 0 : deletedViewIndex ? deletedViewIndex - 1 : 0;
+          onViewChange(updatedShot?.views?.[showViewIndex].id ?? '');
         }
       }
     } catch (error) {
@@ -265,7 +258,7 @@ const ShotViewSelector: React.FC<Props> = ({
                 key={view.id}
                 view={view}
                 viewIndex={viewIndex}
-                currentViewIndex={currentViewIndex}
+                currentView={currentView}
                 onViewChange={onViewChange}
                 onEditView={handleEditView}
                 onDeleteView={handleDeleteView}

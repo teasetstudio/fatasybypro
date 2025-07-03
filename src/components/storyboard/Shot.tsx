@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { IShot } from '@/types';
 import { useStoryboard } from '@/context/StoryboardContext';
 import Indicators from './ShotComponents/Indicators';
@@ -24,7 +24,7 @@ const Shot = ({
 }: Props) => {
   const { currentAspectRatio, updateShot } = useStoryboard();
   const [localDescription, setLocalDescription] = useState(shot.description);
-  const [currentViewIndex, setCurrentViewIndex] = useState(0);
+  const [currentViewId, setCurrentViewId] = useState<string | null>(shot.views?.[0]?.id ?? null);
 
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newDescription = e.target.value;
@@ -32,11 +32,15 @@ const Shot = ({
     updateShot(shot.id, { description: newDescription });
   };
 
-  const handleViewChange = (newIndex: number) => {
-    setCurrentViewIndex(newIndex);
+  const handleViewChange = (viewId: string | null) => {
+    if (viewId) {
+      setCurrentViewId(viewId);
+    }
   };
 
-  const currentView = shot.views?.[currentViewIndex];
+  const currentView = useMemo(() => {
+    return shot.views?.find(view => view.id === currentViewId) ?? null;
+  }, [shot.views, currentViewId]);
 
   return (
     <div 
@@ -47,10 +51,10 @@ const Shot = ({
 
       {/* Current view */}
       {currentView && (
-        <ShotView 
+        <ShotView
           key={currentView.id}
           shot={shot}
-          view={currentView}
+          currentView={currentView}
           brushColor={brushColor}
           brushRadius={brushRadius}
           brushSmoothness={brushSmoothness}
@@ -61,7 +65,7 @@ const Shot = ({
       {/* View selector */}
       <ShotViewSelector
         shot={shot}
-        currentViewIndex={currentViewIndex}
+        currentView={currentView}
         onViewChange={handleViewChange}
       />
 
