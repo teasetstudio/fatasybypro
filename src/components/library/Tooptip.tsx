@@ -68,8 +68,6 @@ const Tooltip: React.FC<Props> = ({
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
     let top = 0;
     let left = 0;
@@ -77,52 +75,52 @@ const Tooltip: React.FC<Props> = ({
     const getPlacementStyles = () => {
       switch (placement) {
         case 'top':
-          top = triggerRect.top + scrollTop - tooltipRect.height - offset;
-          left = triggerRect.left + scrollLeft + (triggerRect.width / 2) - (tooltipRect.width / 2);
+          top = triggerRect.top - tooltipRect.height - offset;
+          left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
           break;
         case 'top-start':
-          top = triggerRect.top + scrollTop - tooltipRect.height - offset;
-          left = triggerRect.left + scrollLeft;
+          top = triggerRect.top - tooltipRect.height - offset;
+          left = triggerRect.left;
           break;
         case 'top-end':
-          top = triggerRect.top + scrollTop - tooltipRect.height - offset;
-          left = triggerRect.right + scrollLeft - tooltipRect.width;
+          top = triggerRect.top - tooltipRect.height - offset;
+          left = triggerRect.right - tooltipRect.width;
           break;
         case 'right':
-          top = triggerRect.top + scrollTop + (triggerRect.height / 2) - (tooltipRect.height / 2);
-          left = triggerRect.right + scrollLeft + offset;
+          top = triggerRect.top + (triggerRect.height / 2) - (tooltipRect.height / 2);
+          left = triggerRect.right + offset;
           break;
         case 'right-start':
-          top = triggerRect.top + scrollTop;
-          left = triggerRect.right + scrollLeft + offset;
+          top = triggerRect.top;
+          left = triggerRect.right + offset;
           break;
         case 'right-end':
-          top = triggerRect.bottom + scrollTop - tooltipRect.height;
-          left = triggerRect.right + scrollLeft + offset;
+          top = triggerRect.bottom - tooltipRect.height;
+          left = triggerRect.right + offset;
           break;
         case 'bottom':
-          top = triggerRect.bottom + scrollTop + offset;
-          left = triggerRect.left + scrollLeft + (triggerRect.width / 2) - (tooltipRect.width / 2);
+          top = triggerRect.bottom + offset;
+          left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
           break;
         case 'bottom-start':
-          top = triggerRect.bottom + scrollTop + offset;
-          left = triggerRect.left + scrollLeft;
+          top = triggerRect.bottom + offset;
+          left = triggerRect.left;
           break;
         case 'bottom-end':
-          top = triggerRect.bottom + scrollTop + offset;
-          left = triggerRect.right + scrollLeft - tooltipRect.width;
+          top = triggerRect.bottom + offset;
+          left = triggerRect.right - tooltipRect.width;
           break;
         case 'left':
-          top = triggerRect.top + scrollTop + (triggerRect.height / 2) - (tooltipRect.height / 2);
-          left = triggerRect.left + scrollLeft - tooltipRect.width - offset;
+          top = triggerRect.top + (triggerRect.height / 2) - (tooltipRect.height / 2);
+          left = triggerRect.left - tooltipRect.width - offset;
           break;
         case 'left-start':
-          top = triggerRect.top + scrollTop;
-          left = triggerRect.left + scrollLeft - tooltipRect.width - offset;
+          top = triggerRect.top;
+          left = triggerRect.left - tooltipRect.width - offset;
           break;
         case 'left-end':
-          top = triggerRect.bottom + scrollTop - tooltipRect.height;
-          left = triggerRect.left + scrollLeft - tooltipRect.width - offset;
+          top = triggerRect.bottom - tooltipRect.height;
+          left = triggerRect.left - tooltipRect.width - offset;
           break;
       }
     };
@@ -176,7 +174,7 @@ const Tooltip: React.FC<Props> = ({
   }, [isVisible, trigger]);
 
   const getTooltipStyles = () => {
-    const baseStyles = "absolute z-50 px-3 py-2 text-sm font-medium rounded-lg shadow-sm";
+    const baseStyles = "fixed z-50 px-3 py-2 text-sm font-medium rounded-lg shadow-sm";
     
     const themeStyles = {
       dark: "text-white bg-gray-900",
