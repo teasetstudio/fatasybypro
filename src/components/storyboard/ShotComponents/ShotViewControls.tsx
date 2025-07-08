@@ -6,6 +6,7 @@ import { useStoryboard } from '@/context';
 interface IProps {
   shot: IShot;
   isDrawing: boolean;
+  isLoading: boolean;
   onPreview: (id: string) => void;
   handleUndo: () => void;
   handleClear: () => void;
@@ -16,7 +17,7 @@ interface IProps {
   isDeletingImage: boolean;
 }
 
-const ShotViewControls = ({ shot, isDrawing, onPreview, handleUndo, handleClear, handleImageUpload, removeBackgroundImage, isBackgroundImage, isImageLoading, isDeletingImage }: IProps) => {
+const ShotViewControls = ({ shot, isDrawing, isLoading, handleUndo, handleClear, handleImageUpload, removeBackgroundImage, isBackgroundImage, isImageLoading, isDeletingImage }: IProps) => {
   const { deleteShot, duplicateShot } = useStoryboard();
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -24,7 +25,7 @@ const ShotViewControls = ({ shot, isDrawing, onPreview, handleUndo, handleClear,
 
   return (
     <div className='flex justify-between items-center'>
-      <div>{isDrawing && <p className='text-sm text-gray-500 font-medium'>Drawing...</p>}</div>
+      <div>{(isDrawing || isLoading) && <p className='text-sm text-gray-500 font-medium'>{isLoading ? 'Loading...' : 'Drawing...'}</p>}</div>
 
       <div className="flex items-center space-x-1">
         {/* <Tooltip content="Open shot editor">

@@ -16,6 +16,7 @@ interface IProps {
 }
 
 const ShotView = ({ shot, currentView, brushColor, brushRadius, brushSmoothness, onPreview }: IProps) => {
+  const [isLoading, setIsLoading] = useState(true);
   const { currentAspectRatio, updateShot, uploadImage, deleteImage, getShotRefData } = useStoryboard();
   const canvasRef = useRef<CanvasDraw | null>(null);
   const savedDataRef = useRef<string>(currentView.canvasData);
@@ -34,7 +35,18 @@ const ShotView = ({ shot, currentView, brushColor, brushRadius, brushSmoothness,
     }
   }, 100), [shot.id, currentView.id]);
 
+  const debouncedLoadingFalse = useCallback(
+    debounce(() => {
+      setIsLoading(false);
+    }, 1000),
+    []
+  );
+
   const handleDrawEnd = () => {
+    if (isLoading) {
+      debouncedLoadingFalse()
+      return;
+    }
     setIsDrawing(false);
     if (canvasRef.current) {
       savedDataRef.current = canvasRef.current.getSaveData();
@@ -149,13 +161,15 @@ const ShotView = ({ shot, currentView, brushColor, brushRadius, brushSmoothness,
         canvasRef.current.loadSaveData(savedData);
       }
     }
-  }, []);
+    debouncedLoadingFalse();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div>
       <ShotViewControls
         shot={shot}
         isDrawing={isDrawing}
+        isLoading={isLoading}
         onPreview={onPreview}
         handleUndo={handleUndo}
         handleClear={handleClear}
@@ -181,6 +195,7 @@ const ShotView = ({ shot, currentView, brushColor, brushRadius, brushSmoothness,
           canvasHeight={currentAspectRatio.height}
           catenaryColor={brushColor}
           hideGrid
+          disabled={isLoading}
           immediateLoading
           imgSrc={getImageSrc()}
           saveData={savedDataRef.current}
